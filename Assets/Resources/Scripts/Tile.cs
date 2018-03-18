@@ -15,6 +15,20 @@ public class Tile : Animated , ClickAble
         mountain = 5,
     }
 
+    public static Tile CreateTile(int xPos, int yPos)
+    {
+        GameObject m_gameObject = new GameObject();
+        m_gameObject.transform.localScale = new Vector3 (2, 2, 1);
+        m_gameObject.layer = LayerMask.NameToLayer("Tile");
+        Tile outPutTile = m_gameObject.AddComponent<Tile>();
+        outPutTile.Initialise(xPos, yPos);
+        BoxCollider2D m_collider = m_gameObject.AddComponent<BoxCollider2D>();
+        m_collider.size = new Vector2(1 / m_gameObject.transform.localScale.x,
+                                                        1 / m_gameObject.transform.localScale.y);
+        m_collider.offset = new Vector2(0.5f / m_collider.transform.localScale.x, 0.5f / m_collider.transform.localScale.y);
+        return outPutTile;
+    }
+
     public static bool IsImpassible(Tile givenTile, PathType givenPathType)
     {
         switch (givenPathType ) 
@@ -46,18 +60,19 @@ public class Tile : Animated , ClickAble
     string m_domain;
     public Terrain m_terrain;
     ModeType currentMode;
-    public void Selected(bool givenSelected) { m_animationLayer["Selected"].SetVisible(givenSelected); }
+    public void Selected(bool givenSelected, Player givenPlayer) { m_animationLayer["Selected"].SetVisible(givenSelected); }
     public bool IsSelected() { return m_animationLayer["Selected"].GetVisible(); }
+    public void Hover(bool givenHover, Player givenPlayer) { }
 
-    public void Initialise(int givenX, int givenY)
+    protected void Initialise(int xPos, int yPos)
     {        
-        SetTransform(givenX, givenY);
         m_building = new Building[0];
         m_terrain = Terrain.blank;
+        SetTransform(xPos, yPos);
         base.Initialise();
         gameObject.layer = LayerMask.NameToLayer("Tile");
+        gameObject.name = ToString();
         AddAnimationLayer("Terrain", "Terrain", new Color(0, 0, 0, 1), true);
-        m_animationLayer["Terrain"].SetAnimationPosition(0, 0, 0);
         AddAnimationLayer("Selected", "Selected", new Color(0, 0, 0, 1), true);
         m_animationLayer["Selected"].SetAnimationPosition(0, 0, -2);
         int probability = UnityEngine.Random.Range(0, 10);
@@ -77,7 +92,7 @@ public class Tile : Animated , ClickAble
         {
             m_terrain = Terrain.mountain;
         }
-        ChangeAnimation("Terrain", "Terrain", (int)m_terrain);
+        ChangeAnimation("Terrain", (int)m_terrain);
         m_animationLayer["Selected"].SetVisible(false);
     }
 
@@ -95,7 +110,7 @@ public class Tile : Animated , ClickAble
                     if (m_building.Length > 0)
                     {
                         m_animationLayer["Overlay"].SetVisible(true);
-                        ChangeAnimation("Overlay", m_building[0].ToString());
+                        ChangeSpriteMap("Overlay", m_building[0].ToString());
 
                     }
                     else if (m_domain != null)
@@ -107,16 +122,16 @@ public class Tile : Animated , ClickAble
                         else
                         {
                             m_animationLayer["Overlay"].SetVisible(true);
-                            ChangeAnimation("Overlay", m_domain);
+                            ChangeSpriteMap("Overlay", m_domain);
                         }
                         break;
                     }
                     break;
                 case ModeType.observe:
-                    if (m_building.Length > 0){ m_animationLayer["Overlay"].SetVisible(true); ChangeAnimation("Overlay", m_building[0].ToString());
+                    if (m_building.Length > 0){ m_animationLayer["Overlay"].SetVisible(true); ChangeSpriteMap("Overlay", m_building[0].ToString());
                     }
                     else if (m_domain != null){
-                        m_animationLayer["Overlay"].SetVisible(true);ChangeAnimation("Overlay", m_domain);
+                        m_animationLayer["Overlay"].SetVisible(true);ChangeSpriteMap("Overlay", m_domain);
                     }
                     break;
             }
@@ -190,7 +205,7 @@ public class Tile : Animated , ClickAble
         if(m_terrain == Terrain.blank || givenTerrain == Terrain.ocean)
         {
             m_terrain = givenTerrain;
-            ChangeAnimation("Terrain","Terrain",(int)m_terrain);
+            ChangeSpriteMap("Terrain","Terrain",(int)m_terrain);
         }
     }
 
@@ -215,7 +230,7 @@ public class Tile : Animated , ClickAble
                 TestMain.AddElement<Building>(ref m_building, givenBuilding);
                 AddAnimationLayer("Overlay", givenBuilding.ToString(), new Color(0, 0, 0, 1), true);
                 m_animationLayer["Overlay"].SetAnimationPosition(0, 0, -1);
-                ChangeAnimation("Overlay", m_building[0].ToString());
+                ChangeSpriteMap("Overlay", m_building[0].ToString());
                 m_animationLayer["Overlay"].SetVisible(true);
                 return true;
             }

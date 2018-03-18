@@ -37,8 +37,6 @@ public static class TextureController
 		{
 			//Convert the found sprite to sprite
 			Sprite currSprite = tempSpriteMap[i] as Sprite;
-			//Find this sprites height
-
 			//Make a new layer
             SetAnimations(currSprite ,ref layerList);
            
@@ -164,12 +162,12 @@ public static class TextureController
 
     }
 
-    public static Dictionary<string, PlayAnimation> GetAnimations(string layerName, Color givenColour)
+    public static SpriteMap GetAnimations(string layerName, Color givenColour)
     {
         string id = layerName + ColourToString(givenColour);
         if(layerList.ContainsKey(id))
         {
-            return layerList[id].GetAnimations();
+            return layerList[id];
         }
         throw new TextureNotfoundException("Texture " + layerName + " with a border of " + givenColour + " is not found");
     }

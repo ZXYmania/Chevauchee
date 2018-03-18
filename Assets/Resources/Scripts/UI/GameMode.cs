@@ -17,40 +17,15 @@ public abstract class GameMode
     protected ClickAble[] selected;
     protected ClickAble hover;
     protected int clickLength;
-    protected Menu[] m_menu;
 
     public static GameMode[] CreateModes(Player givenPlayer)
     {
-        GameMode[] allMode = new GameMode[2];
-        allMode[0] = new ObserveMode(givenPlayer);
-        allMode[1] = new BuildMode(givenPlayer);
+        GameMode[] allMode = new GameMode[3];
+        allMode[(int)ModeType.observe] = new ObserveMode(givenPlayer);
+        allMode[(int)ModeType.build] = new BuildMode(givenPlayer);
+       // allMode[(int)ModeType.army]
         return allMode;
-    }
-
-    public static bool ChangeStates(Player givenPlayer, ModeType newMode, ClickAble clickItem = null)
-    {
-        if (givenPlayer.GetCurrentMode().OnModeExit())
-        {
-            if(clickItem != null)
-            {
-                if (givenPlayer.GetMode(newMode).OnModeEnter(clickItem))
-                {
-                    givenPlayer.SetModeType(newMode);
-                }
-            }
-            else
-            {
-                if (givenPlayer.GetMode(newMode).OnModeEnter())
-                {
-                    givenPlayer.SetModeType(newMode);
-                }
-            }
-
-        }
-        return true;
-    }
-
-    
+    }    
 
     protected GameMode(Player givenPlayer)
     {
@@ -62,7 +37,6 @@ public abstract class GameMode
     public abstract bool OnModeEnter();
     public abstract bool OnModeEnter(ClickAble givenSelected);
     public abstract bool OnModeExit();
-    public abstract void UI();
     public GameObject FindObjectUnder()
     {
         Ray mousePoint = Camera.main.ScreenPointToRay(Input.mousePosition);
@@ -78,22 +52,17 @@ public abstract class GameMode
 public interface ClickAble
 {
     bool IsSelected();
-    void Selected(bool isSelected);
+    void Selected(bool isSelected, Player givenPlayer);
+    void Hover(bool isHover, Player givenPlayer);
 }
 
 public class ObserveMode : GameMode
 {
     public ObserveMode(Player givenPlayer) : base(givenPlayer)
     {
-        m_layerMask = -1;
-        m_menu = new Menu[1];
-        for(int i = 0; i < m_menu.Length; i++)
-        {
-            GameObject tempObject = new GameObject();
-            tempObject.AddComponent<SpriteRenderer>();
-            m_menu[i] = new ObserverMenu();
-        }
-        
+        m_layerMask = (1 << 8);
+        m_layerMask |= (1 << 2);
+        m_layerMask = ~m_layerMask;
     }
     public override void OnClick(bool[] givenClick)
     {
@@ -105,7 +74,7 @@ public class ObserveMode : GameMode
                 ClickAble clickItem = cursorObj.GetComponent<ClickAble>();
                 if (clickItem != null)
                 {
-                    if (clickItem.GetType() == typeof(Tile))
+                    if (cursorObj.layer == LayerMask.NameToLayer("Tile"))
                     {
                         Tile clickTile = clickItem as Tile;
                         if (clickTile.GetDomain() != null)
@@ -115,14 +84,27 @@ public class ObserveMode : GameMode
                                 Building[] clickBuilding = clickTile.GetBuildings();
                                 if (clickBuilding.Length > 0)
                                 {
-                                    ChangeStates(m_player, ModeType.build, clickItem);
+                                    m_player.ChangeStates(ModeType.build, clickItem);
                                 }    
                             }
                         }
-                        TestMain.GetCamera().transform.position = new Vector3(clickTile.GetX(), clickTile.GetY(),TestMain.GetCamera().transform.position.z);
+                        TestMain.MoveCamera(clickTile.GetX(), clickTile.GetY());
+                    }
+                    if(cursorObj.layer == LayerMask.NameToLayer("UI"))
+                    {
+                        selected = new ClickAble[] { clickItem };
+                        selected[0].Selected(true, m_player);
+                    }
+                    if(selected.Length>0)
+                    {
+                        for(int i =0; i < selected.Length;i++)
+                        {
+                            selected[i].Selected(false, m_player);
+                        }
                     }
                 }
             }
+            
         }
     }
 
@@ -134,13 +116,14 @@ public class ObserveMode : GameMode
             ClickAble cursorItem = cursorObj.GetComponent<ClickAble>();
             if (cursorItem != null)
             {
-                if (cursorItem.GetType() == typeof(Tile))
+                if (cursorObj.layer == LayerMask.NameToLayer("Tile"))
                 {
                     if (hover != null)
                     {
-                        hover.Selected(false);
+                        hover.Hover(false, m_player);
                     }
                     hover = cursorItem;
+                    hover.Hover(true, m_player);
                 }
             }
         }
@@ -159,13 +142,8 @@ public class ObserveMode : GameMode
     public override bool OnModeExit()
     {
         hover = null;
-        selected = null;
+        selected = new ClickAble[0];
         return true;
-    }
-
-    public override void UI()
-    {
-        m_menu[0].UI();
     }
 }
 
@@ -174,7 +152,9 @@ public class BuildMode : GameMode
     Tile[] currPath;
     public BuildMode(Player givenPlayer) : base(givenPlayer)
     {
-        m_layerMask = -1;
+        m_layerMask = (1 << 8);
+        m_layerMask |= (1 << 2);
+        m_layerMask = ~m_layerMask;
         currPath = new Tile[0];
     }
 
@@ -188,18 +168,18 @@ public class BuildMode : GameMode
                 if (cursorObj != null)
                 {
                     hover = null;
-                    ClickAble cursorItem = cursorObj.GetComponent<ClickAble>();
-                    if (cursorItem != null)
+                    ClickAble clickItem = cursorObj.GetComponent<ClickAble>();
+                    if (clickItem != null)
                     {
-                        if (cursorItem.GetType() == typeof(Tile))
+                        if (cursorObj.layer == LayerMask.NameToLayer("Tile"))
                         {
-                            if (Building.CanBuildOnTile((Tile)cursorItem, "Road"))
+                            if (Building.CanBuildOnTile((Tile)clickItem, "Road", m_player))
                             {
                                 if (selected.Length == 0)
                                 {
 
-                                    TestMain.AddElement<ClickAble>(ref selected, cursorItem);
-                                    selected[0].Selected(true);
+                                    TestMain.AddElement<ClickAble>(ref selected, clickItem);
+                                    selected[0].Selected(true, m_player);
                                 }
                                 else
                                 {
@@ -209,12 +189,17 @@ public class BuildMode : GameMode
                                         for (int i = 0; i < selected.Length; i++)
                                         {
                                             m_player.AddBuilding((Tile)selected[i], "Road");
-                                            selected[i].Selected(false);
+                                            selected[i].Selected(false, m_player);
                                         }
                                         selected = new ClickAble[0];
                                     }
                                 }
                             }
+                        }
+                        if (cursorObj.layer == LayerMask.NameToLayer("UI"))
+                        {
+                            selected = new ClickAble[] { clickItem };
+                            selected[0].Selected(true, m_player);
                         }
                         clickLength = 0;
                     }
@@ -225,7 +210,7 @@ public class BuildMode : GameMode
         {
             if (selected.Length < 1)
             {
-                ChangeStates(m_player, ModeType.observe);
+                m_player.ChangeStates(ModeType.observe);
             }
             else
             {
@@ -242,9 +227,8 @@ public class BuildMode : GameMode
             ClickAble cursorItem = cursorObj.GetComponent<ClickAble>();
             if (cursorItem != null)
             {
-                if (cursorItem.GetType() == typeof(Tile))
+                if (cursorObj.layer == LayerMask.NameToLayer("Tile"))
                 {
-
                     if (selected.Length > 0)
                     {
                         try
@@ -254,17 +238,17 @@ public class BuildMode : GameMode
                             {
                                 for (int i = 0; i < currPath.Length; i++)
                                 {
-                                    currPath[i].Selected(false);
+                                    currPath[i].Selected(false, m_player);
                                 }
                             }
                             currPath = tempPath;
                             for (int i = 0; i < currPath.Length; i++)
                             {
-                                currPath[i].Selected(true);
+                                currPath[i].Selected(true, m_player);
                             }
                             for (int i = 0; i < selected.Length; i++)
                             {
-                                selected[i].Selected(true);
+                                selected[i].Selected(true, m_player);
                             }
                         }
                         catch (NoPathException e)
@@ -276,10 +260,13 @@ public class BuildMode : GameMode
                     {
                         if (hover != null)
                         {
-                            hover.Selected(false);
+                            hover.Selected(false, m_player);
                         }
-                        hover = cursorItem;
-                        hover.Selected(true);
+                        if (Building.CanBuildOnTile((Tile)cursorItem, "Road", m_player))
+                        {
+                            hover = cursorItem;
+                            hover.Selected(true, m_player);
+                        }
                     }
                 }
             }
@@ -305,7 +292,7 @@ public class BuildMode : GameMode
         ClearSelection();
         if (hover != null)
         {
-            hover.Selected(false);
+            hover.Selected(false, m_player);
         }
         hover = null;
         return true;
@@ -315,20 +302,14 @@ public class BuildMode : GameMode
     {
         for (int i = 0; i < selected.Length; i++)
         {
-            selected[i].Selected(false);
+            selected[i].Selected(false, m_player);
         }
         selected = new ClickAble[0];
         for (int i = 0; i < currPath.Length; i++)
         {
-            currPath[i].Selected(false);
+            currPath[i].Selected(false, m_player);
         }
         currPath = new Tile[0];
         return true;
-    }
-
-
-    public override void UI()
-    {
-        //throw new NotImplementedException();
     }
 }

@@ -39,16 +39,24 @@ public abstract class Building : ClickAble
         }
     }
 
-    public static bool CanBuildOnTile(Tile givenTile, string buildingType)
+    public static bool CanBuildOnTile(Tile givenTile, string buildingType, Player givenPlayer=null )
     {
-        switch(givenTile.GetTerrain())
+        bool terrainMatters = true;
+        if(givenPlayer!=null && givenTile.GetDomain()!=null)
         {
-            case Tile.Terrain.forest: return true;
-            case Tile.Terrain.smooth: return true;
-            case Tile.Terrain.rough: return true;
-            case Tile.Terrain.mountain: break;
-            case Tile.Terrain.ocean:break;
+            terrainMatters = givenPlayer.GetCharacter().RulesDomain(givenTile.GetDomain());
+        }
+        if (terrainMatters)
+        {
+            switch (givenTile.GetTerrain())
+            {
+                case Tile.Terrain.forest: return true;
+                case Tile.Terrain.smooth: return true;
+                case Tile.Terrain.rough: return true;
+                case Tile.Terrain.mountain: break;
+                case Tile.Terrain.ocean: break;
 
+            }
         }
         return false;
     }
@@ -66,8 +74,9 @@ public abstract class Building : ClickAble
     protected ResourceList m_maintenance;
     public abstract int GetTax();
     public virtual ResourceList GetMaintenance() { return m_maintenance; }
-	public void Selected(bool givenSelected) { selected = givenSelected; }
+	public void Selected(bool givenSelected, Player givenPlayer) { selected = givenSelected; }
     public bool IsSelected() { return selected; }
+    public void Hover(bool givenHover, Player givenPlayer) { }
 }
 
 public abstract class Industrial : Building 

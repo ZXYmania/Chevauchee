@@ -18,9 +18,9 @@ public class FrameDoesnotExistException : System.Exception
 
 public class PlayAnimation
 {
-	public float timeOffset;
+
 	bool endAnimation;
-	public Sprite[] m_frames;
+	protected Sprite[] m_frames;
 
 	public Sprite GetSprite(int currentFrame)
     {
@@ -38,8 +38,6 @@ public class PlayAnimation
         }
         return m_frames[currentFrame];}
 
-	public void SetTimeOffset(float givenOffset){timeOffset = givenOffset;}
-	public float GetTimeOffset(){return timeOffset;}
 	public void Initialise()
 	{
         m_frames = new Sprite[0];

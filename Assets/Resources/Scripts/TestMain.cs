@@ -6,9 +6,16 @@ using UnityEngine;
 public class TestMain : MonoBehaviour
 {
     // Use this for initialization
-    public static Camera[] m_camera;
-    public static Player[] m_player;
+    private static Camera[] m_camera;
+    private static Canvas m_canvas;
+    public static void MoveCamera(int givenX, int givenY)
+    {
+        m_camera[0].transform.position = new Vector3(givenX, givenY, m_camera[0].transform.position.z);
+        m_canvas.transform.position = new Vector3(givenX, givenY, m_canvas.transform.position.z);
+    }
+    private static Player[] m_player;
     public static Camera GetCamera() { return m_camera[0]; }
+    public static Canvas GetCanvas() { return m_canvas; }
     public static Player GetPlayer() { return m_player[0]; }
     static Map m_map;
     static public Map GetMap() { return m_map; }
@@ -22,6 +29,9 @@ public class TestMain : MonoBehaviour
     {
         Debug.Log("test");
         m_camera = new Camera[] { gameObject.GetComponent<Camera>()};
+        GameObject canvasObj = new GameObject();
+        m_canvas = canvasObj.AddComponent<Canvas>();
+        m_canvas.transform.position = new Vector3(m_camera[0].transform.position.x, m_camera[0].transform.position.y, -3);
         TextureController.Initialise();
         CreateGameState();
     }

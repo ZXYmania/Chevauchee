@@ -92,11 +92,10 @@ public class Map
     public void GenerateMap()
     {
         //Italy Test Map
-        Dictionary<string, PlayAnimation> oceanMap = TextureController.GetAnimations("England_map", Color.black);
-        string imageString = "England_map" + Color.black + 0;
-        Color[] mapPixel = oceanMap[imageString].m_frames[0].texture.GetPixels();
-        MAPWIDTH = (int)oceanMap[imageString].m_frames[0].texture.width;
-        MAPHEIGHT = (int)oceanMap[imageString].m_frames[0].texture.height;
+        SpriteMap oceanMap = TextureController.GetAnimations("Mediterranean_map", Color.black);
+        Color[] mapPixel = oceanMap.GetAnimation(0).GetSprite(0).texture.GetPixels();
+        MAPWIDTH = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.width;
+        MAPHEIGHT = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.height;
         m_map = new Tile[MAPWIDTH][];
         for (int i = 0; i < MAPWIDTH; i++)
         {
@@ -107,36 +106,43 @@ public class Map
             Color currentColour = mapPixel[i];
             int xPos = i % MAPWIDTH;
             int yPos = Mathf.FloorToInt(i / MAPWIDTH);
-            GameObject tempObject = TestMain.CreateObject("Sprites/Tile", new int[] { xPos, yPos });
-            m_map[xPos][yPos] = tempObject.AddComponent<Tile>();
-            m_map[xPos][yPos].Initialise(xPos, yPos);
-            if (currentColour == Color.black)
+            xPos--;
+            yPos--;
+            if (xPos > 0 && yPos > 0 && xPos < MAPWIDTH-2 && yPos < MAPHEIGHT-2)
             {
-                m_map[xPos][yPos].SetTerrain(Tile.Terrain.ocean);
-            }
-            else if (currentColour == Color.blue)
-            {
-                m_map[xPos][yPos].SetDomain("Ostia");
-            }
-            else if(currentColour == Color.red)
-            {
-                m_map[xPos][yPos].SetDomain("Milan");
-            }
-            else if(currentColour==Color.green)
-            {
-                m_map[xPos][yPos].SetDomain("Ravenna");
-            }
-            else if (currentColour == new Color(1,1,0,1))
-            {
-                m_map[xPos][yPos].SetDomain("Persia");
-            }
-            else if(currentColour == new Color(1,0,1,1))
-            {
-                m_map[xPos][yPos].SetDomain("Carthage");
-            }
-            else
-            {
-                throw new KeyNotFoundException("The Colour "+currentColour+" was not found.");
+                m_map[xPos][yPos] = Tile.CreateTile(xPos, yPos);
+                if (currentColour == Color.black)
+                {
+                    m_map[xPos][yPos].SetTerrain(Tile.Terrain.ocean);
+                }
+                else if (currentColour == Color.blue)
+                {
+                    m_map[xPos][yPos].SetDomain("Ostia");
+                }
+                else if (currentColour == Color.red)
+                {
+                    m_map[xPos][yPos].SetDomain("Milan");
+                }
+                else if (currentColour == Color.green)
+                {
+                    m_map[xPos][yPos].SetDomain("Ravenna");
+                }
+                else if (currentColour == new Color(1, 1, 0, 1))
+                {
+                    m_map[xPos][yPos].SetDomain("Persia");
+                }
+                else if (currentColour == new Color(1, 0, 1, 1))
+                {
+                    m_map[xPos][yPos].SetDomain("Carthage");
+                }
+                else if (currentColour == Color.white)
+                {
+
+                }
+                else
+                {
+                    throw new KeyNotFoundException("The Colour " + currentColour + " was not found.");
+                }
             }
         }
     }
@@ -215,9 +221,9 @@ public class Map
             }
             else
             {
-                throw new NoPathException("There is no path between "+startTile +" and "+endTile+" when travelling by "+givenPathType);
-                //return new Tile[0];
-            }     
+                throw new NoPathException("There is no path between " + startTile + " and " + endTile + " when travelling by " + givenPathType);
+                //
+            }
         }
     }
 
@@ -228,22 +234,22 @@ public class Map
         Tile[] bestPath = new Tile[0];
         float distance = -1;
         float[][] distanceMap = new float[MAPWIDTH][];
-        Vector2[][] previousTile = new Vector2[MAPWIDTH][];
+        Vector2?[][] previousTilePos = new Vector2?[MAPWIDTH][];
         SearchAbleArray<Tile> queue = new SearchAbleArray<Tile>();
         TileArray explored = new TileArray();
         queue.Add(source);
-        for (int i = 0; i < MAPHEIGHT; i++)
+        for (int i = 0; i < MAPWIDTH; i++)
         {
             distanceMap[i] = new float[MAPHEIGHT];
-            previousTile[i] = new Vector2[MAPHEIGHT];
+            previousTilePos[i] = new Vector2?[MAPHEIGHT];
             for(int j =0; j < distanceMap[i].Length; j++)
             {
                 distanceMap[i][j] = -1;
             }
         }
         distanceMap[source.GetX()][source.GetY()] = 0;
-        previousTile[source.GetX()][source.GetY()] = new Vector2(-1,-1);
-        previousTile[destination.GetX()][destination.GetY()] = new Vector2(-1, -1);
+        previousTilePos[source.GetX()][source.GetY()] = null;
+        previousTilePos[destination.GetX()][destination.GetY()] = null;
         while (queue.GetSize() > 0 && !pathFound)
         {
             Tile[] queueArray = queue.GetOrderedArray();
@@ -277,7 +283,7 @@ public class Map
                         if (distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] < 0 || alteredDistance < distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()])
                         {
                             distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = alteredDistance;
-                            previousTile[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = new Vector2(currentElement.GetX(), currentElement.GetY());
+                            previousTilePos[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = new Vector2(currentElement.GetX(), currentElement.GetY());
                         }
                     }
                 }
@@ -285,14 +291,28 @@ public class Map
             queue.Remove(currentElement);
         }
         distance = distanceMap[destination.GetX()][destination.GetY()];
-        Tile prevTile = GetTile(previousTile[destination.GetX()][destination.GetY()]);
         Tile[] tempBestPath = new Tile[0];
         TestMain.AddElement<Tile>(ref tempBestPath, destination);
-        while (prevTile!=null)
+        Tile previousTile = destination;
+        int count=0;
+        do
         {
-            TestMain.AddElement<Tile>(ref tempBestPath, prevTile);
-            prevTile = GetTile(previousTile[prevTile.GetX()][prevTile.GetY()]);
+            if (previousTilePos[previousTile.GetX()][previousTile.GetY()] != null)
+            {
+                previousTile = GetTile((Vector2)previousTilePos[previousTile.GetX()][previousTile.GetY()]);
+                TestMain.AddElement<Tile>(ref tempBestPath, previousTile);
+            }
+            else
+            {
+                previousTile = null;
+            }
+            if(++count >1000)
+            {
+                return new KeyValuePair<float, Tile[]>(-1, new Tile[0]);
+            }
         }
+        while (previousTile != null);
+
         bestPath = new Tile[tempBestPath.Length];
         for(int i =0; i < tempBestPath.Length;i++)
         {

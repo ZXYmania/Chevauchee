@@ -13,19 +13,21 @@ public class AnimationOutofBoundsException : System.Exception
 public class AnimationLayer 
 {
 	string m_name;
-    protected string GetAnimationName(string givenAnimationName ,int givenAnimationVariant) { return givenAnimationName + m_colour+givenAnimationVariant; }
     public string GetName() { return m_name; }
-	string currentAnimation;
-	string nextAnimation;
-    string baseAnimation;
+	string currentSpriteMap;
+    int currentAnimation;
+	int nextAnimation;
 	int currentFrame;
 	int currentTime;
 	bool m_pause;
     bool m_visible;
     Color m_colour;
-	SpriteRenderer m_renderer;
+    float m_timeOffset;
+    public void SetTimeOffset(float givenOffset) { m_timeOffset = givenOffset; }
+    public float GetTimeOffset() { return m_timeOffset; }
+    SpriteRenderer m_renderer;
     //All of the different animations
-	public Dictionary<string,PlayAnimation> m_animationList;
+	public Dictionary<string ,SpriteMap> m_animationList;
     //Each Gameobject has it's own Layer
 	public GameObject GetLayer()
     {
@@ -35,10 +37,10 @@ public class AnimationLayer
         }
         return m_renderer.gameObject;
     }
-    //The name of the layer
     //The amount of animations
 	public int GetAnimationListSize(){return m_animationList.Count;}
-	public string GetAnimation() {return currentAnimation;}
+	public int GetAnimation() {return currentAnimation;}
+    public string GetAnimationName() { return m_animationList[currentSpriteMap].GetAnimation(currentAnimation).GetSprite(0).name; }
     //Toggle the pause the animation
 	public void TogglePause() {m_pause = !m_pause;}
     //Set the pause
@@ -49,7 +51,7 @@ public class AnimationLayer
         currentFrame = 0;
         if (m_visible)
         {
-            SetTexture(m_animationList[currentAnimation].GetSprite(currentFrame));
+            SetTexture(m_animationList[currentSpriteMap].GetAnimation(currentAnimation).GetSprite(currentFrame));
         }
         else
         {
@@ -61,60 +63,53 @@ public class AnimationLayer
 	{
 		return currentFrame;
 	}
-	public void SetTimeOffset(string animaton, float givenvalue){m_animationList[animaton].SetTimeOffset(givenvalue);}
-	public void SetTimeOffset(float givenValue) {m_animationList[currentAnimation].SetTimeOffset(givenValue);}
-	public float GetTimeOffset(){return m_animationList[currentAnimation].GetTimeOffset();}
+
 	public int GetAnimationFrame(int index) {return currentFrame;}
 	public void SetTexture(Sprite givenTexture){m_renderer.sprite = givenTexture;}
-	public void SetNextAnimation(string givenAnimation){nextAnimation = givenAnimation;}
+	public void SetNextAnimation(int givenAnimation){nextAnimation = givenAnimation;}
 
-    public void AddAnimation(string givenAnimation)
+    public void AddSpriteMap(string givenAnimation)
     {
-        Dictionary<string, PlayAnimation> tempanimationList = TextureController.GetAnimations(givenAnimation, m_colour);
-        foreach (var item in tempanimationList)
-        {
-            if (item.Value.GetTimeOffset() < 1)
-            {
-                item.Value.SetTimeOffset(1);
-            }
-            m_animationList.Add(item.Key,item.Value);
-        }
+        SpriteMap tempSpriteMap = TextureController.GetAnimations(givenAnimation, m_colour);
+        m_animationList.Add(tempSpriteMap.GetName(), tempSpriteMap);
     }
-    public void ChangeAnimation(string givenAnimationName, int givenAnimationVariant)
+
+    public void ChangeSpriteMap(string givenSpriteMap, int givenAnimation=0, int givenFrame= 0)
     {
-        string givenAnimation = GetAnimationName(givenAnimationName, givenAnimationVariant);
-        if (currentAnimation != givenAnimation)
+        if (currentSpriteMap != givenSpriteMap || currentAnimation != givenAnimation)
         {
             currentFrame = 0;
             currentTime = 0;
+            currentSpriteMap = givenSpriteMap;
+            currentAnimation = givenAnimation;
         }
-        currentAnimation = givenAnimation;
-        nextAnimation = baseAnimation;
+        nextAnimation = m_animationList[currentSpriteMap].GetBaseAnimationAsInt();
+        currentFrame = givenFrame;
     }
-    public void ChangeAnimation(string givenAnimationName, int givenAnimationVariant, int givenFrame = 0) 
+
+    public void ChangeAnimation(int givenAnimation, int givenFrame = 0) 
 	{
-        string givenAnimation = GetAnimationName(givenAnimationName, givenAnimationVariant);
 		if(currentAnimation != givenAnimation)
 		{
 			currentTime = 0;
 		}
 		currentAnimation = givenAnimation; 
-		nextAnimation = baseAnimation;
+		nextAnimation = m_animationList[currentSpriteMap].GetBaseAnimationAsInt();
 		currentFrame = givenFrame;
 	}
 	public void ChangeAnimation()
 	{
 		currentAnimation = nextAnimation;
-		nextAnimation = baseAnimation;
+		nextAnimation = m_animationList[currentSpriteMap].GetBaseAnimationAsInt();
 		currentFrame = 0;
 		currentTime = 0;
 	}
 
 	public void SetAnimationSize(float givenSize){m_renderer.gameObject.transform.localScale = new Vector3 (givenSize, givenSize, 1);}
-	public Vector2 GetAnimationSize()		 {return m_animationList[currentAnimation].GetSprite(0).rect.size;}
-	public Vector2 GetDefaultAnimationSize() {return m_animationList[baseAnimation].GetSprite(0).rect.size;}
+	public Vector2 GetAnimationSize()		 {return m_animationList[currentSpriteMap].GetAnimation(0).GetSprite(0).rect.size;}
+	public Vector2 GetDefaultAnimationSize() {return m_animationList[currentSpriteMap].GetAnimation(currentAnimation).GetSprite(0).rect.size;}
 	public void SetAnimationPosition(int givenX, int givenY, int givenZ = 0) {m_renderer.gameObject.transform.localPosition = new Vector3 (givenX, givenY, givenZ);}
-    public void Initialise(SpriteRenderer givenRenderer, string givenName, string startingAnimation, Color givenColour, int givenAnimationVariant, bool givenToggle)
+    public void Initialise(SpriteRenderer givenRenderer, string givenName, string startingSpriteMap, Color givenColour, int givenAnimationVariant, bool givenToggle)
     {
         m_name = givenName;
         m_renderer = givenRenderer;
@@ -123,11 +118,10 @@ public class AnimationLayer
         currentTime = 0;
         m_visible = true;
         m_colour = givenColour;
-        m_animationList = new Dictionary<string, PlayAnimation>();
-        currentAnimation = GetAnimationName(startingAnimation, givenAnimationVariant);
-        nextAnimation = GetAnimationName(startingAnimation, givenAnimationVariant);
-        baseAnimation = GetAnimationName(startingAnimation, givenAnimationVariant);
-        AddAnimation(startingAnimation);
+        m_animationList = new Dictionary<string, SpriteMap>();
+        AddSpriteMap(startingSpriteMap);
+        currentSpriteMap = startingSpriteMap;
+        nextAnimation = m_animationList[startingSpriteMap].GetBaseAnimationAsInt();
     }
 
     public void Animate()
@@ -140,7 +134,7 @@ public class AnimationLayer
                 if (currentTime >= GetTimeOffset())
                 {
                     currentFrame++;
-                    if (m_animationList[currentAnimation].UpdateFrame(currentFrame))
+                    if (m_animationList[currentSpriteMap].GetAnimation(currentAnimation).UpdateFrame(currentFrame))
                     {
                         ChangeAnimation();
                     }
@@ -148,11 +142,11 @@ public class AnimationLayer
                 }
                 currentTime++;
             }
-            if (GetAnimation() == null)
+            if (GetAnimation() < 0 )
             {
                 throw new AnimationOutofBoundsException("The animation isn't set for " + GetName());
             }
-            SetTexture(m_animationList[currentAnimation].GetSprite(0));
+            SetTexture(m_animationList[currentSpriteMap].GetAnimation(currentAnimation).GetSprite(currentFrame));
         }
     }
 

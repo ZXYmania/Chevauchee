@@ -38,29 +38,47 @@ public abstract class Animated : SecondDimension
         if (!m_animationLayer.ContainsKey(givenName))
         {
             AnimationLayer currentAnimation = new AnimationLayer();
-            GameObject currentModeObject = new GameObject();
-            currentModeObject.transform.parent = gameObject.transform;
-            currentModeObject.transform.position = new Vector3(transform.position.x, transform.position.y, -1);
-            currentModeObject.transform.localScale = new Vector3(1, 1, 1);
-            currentModeObject.name = gameObject.name;
-            SpriteRenderer currentRenderer = currentModeObject.AddComponent<SpriteRenderer>();
-            currentAnimation.Initialise(currentRenderer, givenName, givenAnimation,  givenColour, givenAnimationVariant, isPaused);
+            GameObject currentObject = gameObject;
+            SpriteRenderer currentRenderer = gameObject.GetComponent<SpriteRenderer>();
+            if (m_animationLayer.Count > 0)
+            {
+                currentObject = new GameObject();
+                currentObject.transform.parent = gameObject.transform;
+                currentObject.transform.position = new Vector3(transform.position.x, transform.position.y, -1);
+                currentObject.transform.localScale = new Vector3(1, 1, 1);
+                currentObject.name = givenName;
+                currentRenderer = null;
+            }
+            else
+            {
+                currentObject.name = gameObject.name + " " + givenName;
+            }
+            if(currentRenderer == null)
+            {
+                currentRenderer = currentObject.AddComponent<SpriteRenderer>();
+            }             
+            currentAnimation.Initialise(currentRenderer, givenName, givenAnimation, givenColour, givenAnimationVariant, isPaused);
             m_animationLayer.Add(givenName, currentAnimation);
         }
         else
         {
-            m_animationLayer[givenName].AddAnimation(givenAnimation);
+            m_animationLayer[givenName].AddSpriteMap(givenAnimation);
         }
     }
 
     public void AddAnimation(string givenLayer, string givenAnimation)
     {
-        m_animationLayer[givenLayer].AddAnimation(givenAnimation);
+        m_animationLayer[givenLayer].AddSpriteMap(givenAnimation);
     }
     
-    public void ChangeAnimation(string givenLayer,string givenAniamtion, int givenFrame = 0)
+    public void ChangeAnimation(string givenLayer,int givenAniamtion, int givenFrame = 0)
     {
         m_animationLayer[givenLayer].ChangeAnimation(givenAniamtion,givenFrame);
     }
+    public void ChangeSpriteMap(string givenLayer,string givenSpriteMap, int givenAnimation = 0, int givenFrame = 0)
+    {
+        m_animationLayer[givenLayer].ChangeSpriteMap(givenSpriteMap, givenAnimation, givenFrame);
+    }
+
 }
 

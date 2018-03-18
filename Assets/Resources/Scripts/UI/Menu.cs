@@ -7,42 +7,80 @@ using UnityEngine.UI;
 
 public abstract class Menu 
 {
-    protected Canvas m_canvas;
+    protected MenuItem[] m_item;
     protected virtual void Initialise()
     {
-       // m_canvas =  ;
+        Canvas canvas = TestMain.GetCanvas();
+        GameObject canvasObj = new GameObject();
+        canvas = canvasObj.AddComponent<Canvas>();
+        canvas.transform.position = new Vector3(0, 0, -3);
+        m_item = new MenuItem[0];
     }
-
+    public void Visible(bool givenVisible)
+    {
+        for(int i = 0; i < m_item.Length;i++ )
+        {
+            m_item[i].Visible(givenVisible);
+        }
+    }
     public void UI()
     {
 
     }
 }
 
-public class InfoPane : MonoBehaviour
+public class OverLayMenu : Menu
 {
+    public OverLayMenu()
+    {
+        Initialise();
+    }
 
+    protected override void Initialise()
+    {
+        base.Initialise();
+        MenuItem observerModebuttonItem = MenuButton.CreateMenuButton("ObserverMode", Color.black, ModeType.observe);
+        observerModebuttonItem.transform.SetParent(TestMain.GetCanvas().transform);
+        TestMain.AddElement<MenuItem>(ref m_item, observerModebuttonItem);
+        m_item[(int)ModeType.observe].transform.localPosition = new Vector3(-25, -15, 0);
+        m_item[(int)ModeType.observe].Visible(false);
+        MenuItem buildModeButton = MenuButton.CreateMenuButton("BuildMode", Color.black, ModeType.build);
+        buildModeButton.transform.SetParent(TestMain.GetCanvas().transform);
+        TestMain.AddElement<MenuItem>(ref m_item, buildModeButton);
+        m_item[(int)ModeType.build].transform.localPosition = new Vector3(-25, -15, 0);
+        m_item[(int)ModeType.build].Visible(true);
+
+    }
+    public void ChangeMode(ModeType oldMode, ModeType newMode)
+    {
+        m_item[(int)oldMode].Visible(true);
+        m_item[(int)newMode].Visible(false);
+    }
 }
 
 
 
 public class ObserverMenu : Menu
 {
-    Button[] m_button;
     public ObserverMenu() 
     {
         Initialise();
     }
     protected override void Initialise()
     {
-        /*
         base.Initialise();
-        m_button = new Button[1];
-        m_button[0] = m_canvas.gameObject.AddComponent<Button>();
-        Dictionary<string, PlayAnimation> currentAnimation = TextureController.GetAnimations("Buildmode", Color.black);
-        string animationName = "BuildMode" + Color.black + 0;
-        m_button[0].image.sprite = currentAnimation[animationName].GetSprite(0);
-        m_button[0].transform.position = new Vector3(0, 0, 0);
-        */
+    }
+}
+
+public class BuildingMenu : Menu
+{
+    public BuildingMenu()
+    {
+        Initialise();
+    }
+    protected override void Initialise()
+    {
+        base.Initialise();
+
     }
 }
