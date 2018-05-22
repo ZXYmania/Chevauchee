@@ -11,6 +11,7 @@ public class Player : MonoBehaviour
 
     GameMode[] m_mode;
     public GameMode GetMode(ModeType givenModeType) { return m_mode[(int)givenModeType]; }
+
     ModeType currMode;
     public ModeType GetCurrentModeType() { return currMode; }
     public GameMode GetCurrentMode(){return m_mode[(int)currMode];}
@@ -55,6 +56,24 @@ public class Player : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        float scroll = Input.GetAxis("Mouse ScrollWheel");
+        if (scroll!=0)
+        {
+            if (scroll > 0)
+            {
+                if (TestMain.GetCamera().orthographicSize > 25)
+                {
+                    TestMain.GetCamera().orthographicSize-=5;
+                }
+            }
+            else
+            {
+                if (TestMain.GetCamera().orthographicSize < 200)
+                {
+                    TestMain.GetCamera().orthographicSize+=5;
+                }
+            }
+        }
         bool[] currMouseDown = new bool[] { Input.GetMouseButtonDown(0), Input.GetMouseButtonDown(1) };
         if (currMouseDown[0] || currMouseDown[1])
         {

@@ -7,7 +7,7 @@ public class MenuButton : MenuItem
     ModeType m_mode;
     public static MenuButton CreateMenuButton(string givenTexture, Color givenColor, ModeType givenModeType)
     {
-       MenuButton output = CreateMenuItem<MenuButton>(givenTexture, givenColor);
+        MenuButton output = CreateMenuItem<MenuButton>(givenTexture, givenColor);
         output.Initialise(givenModeType);
         return output;
     }

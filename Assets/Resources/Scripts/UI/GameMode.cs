@@ -141,6 +141,7 @@ public class ObserveMode : GameMode
 
     public override bool OnModeExit()
     {
+        hover.Selected(false,m_player);
         hover = null;
         selected = new ClickAble[0];
         return true;
@@ -150,12 +151,19 @@ public class ObserveMode : GameMode
 public class BuildMode : GameMode
 {
     Tile[] currPath;
+    string currbuilding;
     public BuildMode(Player givenPlayer) : base(givenPlayer)
     {
         m_layerMask = (1 << 8);
         m_layerMask |= (1 << 2);
         m_layerMask = ~m_layerMask;
         currPath = new Tile[0];
+        currbuilding = "Road";
+    }
+
+    public void SetBuilding(string givenBuilding)
+    {
+        currbuilding = givenBuilding;
     }
 
     public override void OnClick(bool[] givenClick)
@@ -173,25 +181,32 @@ public class BuildMode : GameMode
                     {
                         if (cursorObj.layer == LayerMask.NameToLayer("Tile"))
                         {
-                            if (Building.CanBuildOnTile((Tile)clickItem, "Road", m_player))
+                            if (Building.CanBuildOnTile((Tile)clickItem, currbuilding, m_player))
                             {
-                                if (selected.Length == 0)
+                                if (currbuilding != "Road")
                                 {
-
-                                    TestMain.AddElement<ClickAble>(ref selected, clickItem);
-                                    selected[0].Selected(true, m_player);
+                                    m_player.AddBuilding((Tile)clickItem, currbuilding);
+                                    selected = new ClickAble[0];
                                 }
                                 else
                                 {
-                                    TestMain.AddElement<ClickAble>(ref selected, (ClickAble[])currPath);
-                                    if (givenClick[0])
+                                    if (selected.Length == 0)
                                     {
-                                        for (int i = 0; i < selected.Length; i++)
+                                        TestMain.AddElement<ClickAble>(ref selected, clickItem);
+                                        selected[0].Selected(true, m_player);
+                                    }
+                                    else
+                                    {
+                                        TestMain.AddElement<ClickAble>(ref selected, (ClickAble[])currPath);
+                                        if (givenClick[0])
                                         {
-                                            m_player.AddBuilding((Tile)selected[i], "Road");
-                                            selected[i].Selected(false, m_player);
+                                            for (int i = 0; i < selected.Length; i++)
+                                            {
+                                                m_player.AddBuilding((Tile)selected[i], currbuilding);
+                                                selected[i].Selected(false, m_player);
+                                            }
+                                            selected = new ClickAble[0];
                                         }
-                                        selected = new ClickAble[0];
                                     }
                                 }
                             }
@@ -229,43 +244,54 @@ public class BuildMode : GameMode
             {
                 if (cursorObj.layer == LayerMask.NameToLayer("Tile"))
                 {
-                    if (selected.Length > 0)
+                    if (Building.CanBuildOnTile((Tile)cursorItem, currbuilding, m_player))
                     {
-                        try
+                        if (currbuilding != "Road")
                         {
-                            Tile[] tempPath = TestMain.GetMap().GetBestPath((Tile)selected[selected.Length - 1], (Tile)cursorItem, PathType.CompareTerrain);
-                            if (currPath != null)
+                            cursorItem.Hover(true, m_player);
+                        }
+                        else
+                        {
+                            if (selected.Length > 0)
                             {
-                                for (int i = 0; i < currPath.Length; i++)
+                                try
                                 {
-                                    currPath[i].Selected(false, m_player);
+
+                                    Tile[] tempPath = TestMain.GetMap().GetBestPath((Tile)selected[selected.Length - 1], (Tile)cursorItem, PathType.CompareTerrain);
+                                    if (currPath != null)
+                                    {
+                                        for (int i = 0; i < currPath.Length; i++)
+                                        {
+                                            currPath[i].Selected(false, m_player);
+                                        }
+                                    }
+                                    currPath = tempPath;
+                                    for (int i = 0; i < currPath.Length; i++)
+                                    {
+                                        currPath[i].Selected(true, m_player);
+                                    }
+                                    for (int i = 0; i < selected.Length; i++)
+                                    {
+                                        selected[i].Selected(true, m_player);
+                                    }
+                                }
+                                catch (NoPathException e)
+                                {
+                                    //hit ocean or imppassible
                                 }
                             }
-                            currPath = tempPath;
-                            for (int i = 0; i < currPath.Length; i++)
+                            else
                             {
-                                currPath[i].Selected(true, m_player);
+                                if (hover != null)
+                                {
+                                    hover.Selected(false, m_player);
+                                }
+                                if (Building.CanBuildOnTile((Tile)cursorItem, currbuilding, m_player))
+                                {
+                                    hover = cursorItem;
+                                    hover.Selected(true, m_player);
+                                }
                             }
-                            for (int i = 0; i < selected.Length; i++)
-                            {
-                                selected[i].Selected(true, m_player);
-                            }
-                        }
-                        catch (NoPathException e)
-                        {
-                            //hit ocean or imppassible
-                        }
-                    }
-                    else
-                    {
-                        if (hover != null)
-                        {
-                            hover.Selected(false, m_player);
-                        }
-                        if (Building.CanBuildOnTile((Tile)cursorItem, "Road", m_player))
-                        {
-                            hover = cursorItem;
-                            hover.Selected(true, m_player);
                         }
                     }
                 }

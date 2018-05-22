@@ -12,7 +12,7 @@ public abstract class Menu
     {
         Canvas canvas = TestMain.GetCanvas();
         GameObject canvasObj = new GameObject();
-        canvas = canvasObj.AddComponent<Canvas>();
+      //  canvas = canvasObj.AddComponent<Canvas>();
         canvas.transform.position = new Vector3(0, 0, -3);
         m_item = new MenuItem[0];
     }
@@ -77,6 +77,12 @@ public class BuildingMenu : Menu
     public BuildingMenu()
     {
         Initialise();
+        BuildingButton observerModebuttonItem = BuildingButton.CreateBuildingButton("Farm", Color.black);
+        observerModebuttonItem.transform.SetParent(TestMain.GetCanvas().transform);
+        TestMain.AddElement<MenuItem>(ref m_item, observerModebuttonItem);
+        m_item[0].transform.localPosition = new Vector3(20, 10, 0);
+        m_item[0].Visible(true);
+        m_item[0].SetSize(10,10);
     }
     protected override void Initialise()
     {

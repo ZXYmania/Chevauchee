@@ -215,15 +215,9 @@ public class Map
         else
         {
             KeyValuePair<float, Tile[]> output = GetDijkstraPath(startTile, endTile, givenPathType);
-            if (output.Key >= 0)
-            {
-                return output.Value;
-            }
-            else
-            {
-                throw new NoPathException("There is no path between " + startTile + " and " + endTile + " when travelling by " + givenPathType);
-                //
-            }
+
+            return output.Value;
+
         }
     }
 
@@ -231,37 +225,59 @@ public class Map
     public KeyValuePair<float, Tile[]> GetDijkstraPath(Tile source, Tile destination, PathType givenPathType)
     {
         bool pathFound = false;
+        int count = 0;
         Tile[] bestPath = new Tile[0];
         float distance = -1;
         float[][] distanceMap = new float[MAPWIDTH][];
         Vector2?[][] previousTilePos = new Vector2?[MAPWIDTH][];
         SearchAbleArray<Tile> queue = new SearchAbleArray<Tile>();
+        SearchAbleArray<Tile> diagonalQueue = new SearchAbleArray<Tile>();
+        SearchAbleArray<Tile> sidewaysQueue = new SearchAbleArray<Tile>();
+        SearchAbleArray<Tile> backwardsQueue = new SearchAbleArray<Tile>();
         TileArray explored = new TileArray();
         queue.Add(source);
         for (int i = 0; i < MAPWIDTH; i++)
         {
             distanceMap[i] = new float[MAPHEIGHT];
             previousTilePos[i] = new Vector2?[MAPHEIGHT];
-            for(int j =0; j < distanceMap[i].Length; j++)
+            for(int j =0; j < MAPHEIGHT; j++)
             {
                 distanceMap[i][j] = -1;
+                previousTilePos[i][j] = null;
             }
         }
+        previousTilePos[source.GetX()][source.GetY()] = new Vector2(source.GetX(), source.GetY());
         distanceMap[source.GetX()][source.GetY()] = 0;
-        previousTilePos[source.GetX()][source.GetY()] = null;
-        previousTilePos[destination.GetX()][destination.GetY()] = null;
-        while (queue.GetSize() > 0 && !pathFound)
+        while ((queue.GetSize() > 0 || sidewaysQueue.GetSize() > 0 || backwardsQueue.GetSize() > 0) && !pathFound)
         {
-            Tile[] queueArray = queue.GetOrderedArray();
-            float minQueueDistance = distanceMap[queueArray[0].GetX()][queueArray[0].GetY()];
-            Tile currentElement = queueArray[0];
-            for (int i = 1; i < queueArray.Length; i++)
+            Tile[] currQueueArray;
+            SearchAbleArray<Tile> currentQueue;
+            if (queue.GetSize() > 0)
             {
-               if(distanceMap[queueArray[i].GetX()][queueArray[i].GetY()]<minQueueDistance)
+                currentQueue = queue;
+            }
+            else if (diagonalQueue.GetSize() > 0)
+            {
+                currentQueue = diagonalQueue;
+            }
+            else if (sidewaysQueue.GetSize() > 0)
+            {
+                currentQueue = sidewaysQueue;
+            }
+            else
+            {
+                currentQueue = backwardsQueue;
+            }
+            currQueueArray = currentQueue.GetOrderedArray();
+            Tile currentElement = currQueueArray[0];
+            float minQueueDistance = distanceMap[currQueueArray[0].GetX()][currQueueArray[0].GetY()];
+            for (int i = 0; i < currQueueArray.Length; i++)
+           {
+                if (distanceMap[currQueueArray[i].GetX()][currQueueArray[i].GetY()] < minQueueDistance )
                 {
-                    currentElement = queueArray[i];
+                    currentElement = currQueueArray[i];
                 }
-            }        
+            }
             explored.AddTile(currentElement);
             if (currentElement == destination)
             {
@@ -269,54 +285,68 @@ public class Map
             }
             else
             {
-                Tile[] queueAdjacent = GetAdjacent(currentElement);
+                Tile[] queueAdjacent = GetAdjacent(currentElement, destination);
+
                 for (int i = 0; i < queueAdjacent.Length; i++)
                 {
                     float currToNextTravelDistance = GetAdjacentTravelDistance(currentElement, queueAdjacent[i], givenPathType);
-                    if(currToNextTravelDistance > 0)
+                    if (currToNextTravelDistance > 0)
                     {
-                        if (!explored.Contains(queueAdjacent[i]) && !queue.Contains(queueAdjacent[i]))
+                        if (previousTilePos[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] == null)
                         {
-                            queue.Add(queueAdjacent[i]);
-                        }
-                        float alteredDistance = distanceMap[currentElement.GetX()][currentElement.GetY()] + currToNextTravelDistance;
-                        if (distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] < 0 || alteredDistance < distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()])
-                        {
-                            distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = alteredDistance;
-                            previousTilePos[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = new Vector2(currentElement.GetX(), currentElement.GetY());
+                            if (i < 1)
+                            {
+                                queue.Add(queueAdjacent[i]);
+                            }
+                            else if(i < 3)
+                            {
+                                diagonalQueue.Add(queueAdjacent[i]);
+                            }
+                            else if (i < 5)
+                            {
+                                sidewaysQueue.Add(queueAdjacent[i]);
+                            }
+                            else
+                            {
+                                backwardsQueue.Add(queueAdjacent[i]);
+                            }
+                           float alteredDistance = distanceMap[currentElement.GetX()][currentElement.GetY()] + currToNextTravelDistance;
+                            if (distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] < 0 || alteredDistance < distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()])
+                            {
+                               distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = alteredDistance;
+                               previousTilePos[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = new Vector2(currentElement.GetX(), currentElement.GetY());
+                            }
                         }
                     }
                 }
             }
-            queue.Remove(currentElement);
+            currentQueue.Remove(currentElement);
         }
-        distance = distanceMap[destination.GetX()][destination.GetY()];
+       // distance = distanceMap[destination.GetX()][destination.GetY()];
         Tile[] tempBestPath = new Tile[0];
-        TestMain.AddElement<Tile>(ref tempBestPath, destination);
         Tile previousTile = destination;
-        int count=0;
         do
         {
             if (previousTilePos[previousTile.GetX()][previousTile.GetY()] != null)
             {
-                previousTile = GetTile((Vector2)previousTilePos[previousTile.GetX()][previousTile.GetY()]);
                 TestMain.AddElement<Tile>(ref tempBestPath, previousTile);
+                previousTile = GetTile((Vector2)previousTilePos[previousTile.GetX()][previousTile.GetY()]);
             }
             else
             {
-                previousTile = null;
-            }
-            if(++count >1000)
-            {
-                return new KeyValuePair<float, Tile[]>(-1, new Tile[0]);
+                throw new NoPathException("There is no path between " + source+ " and " + destination + " when travelling by " + givenPathType);
             }
         }
-        while (previousTile != null);
-
-        bestPath = new Tile[tempBestPath.Length];
-        for(int i =0; i < tempBestPath.Length;i++)
+        while (previousTile != source);
+        if(tempBestPath.Length > 5)
         {
-            bestPath[i] = tempBestPath[tempBestPath.Length-1-i];
+            Debug.Log("cool");
+        }
+        TestMain.AddElement<Tile>(ref tempBestPath, source);
+        bestPath = new Tile[tempBestPath.Length];
+        for(int i = tempBestPath.Length - 1; i >= 0;i--)
+        {
+            bestPath[i] = tempBestPath[i];
         }
         return new KeyValuePair< float, Tile[]>(distance, bestPath);
     }
@@ -377,19 +407,100 @@ public class Map
     }
     public Tile[] GetAdjacent(Tile givenTile, Tile goalTile)
     {
-        Tile[] adjacentTile = GetAdjacent(givenTile);
+
+        Tile[] unSortedAdjacentTile = GetAdjacent(givenTile);
+        if(unSortedAdjacentTile.Length < 8)
+        {
+            return unSortedAdjacentTile;
+        }
+        Tile[] sortedAdjacentTile = new Tile[8];
+        Vector2 goalPos = new Vector2(goalTile.GetX() - givenTile.GetX(), goalTile.GetY() - givenTile.GetY());
+        if(goalPos.x!=0)
+        {
+            goalPos.x = goalPos.x / Mathf.Abs(goalPos.x);
+        }
+        if (goalPos.y != 0)
+        {
+            goalPos.y = goalPos.y / Mathf.Abs(goalPos.y);
+        }
+        int[] tileOrder = new int[0];
+        switch ((int)goalPos.x)
+        {
+            case -1:    switch((int)goalPos.y)
+                        {
+                            case -1: tileOrder = new int[] { 0,1,3,2,5,4,6,7 };
+                            break;
+                            case 0:  tileOrder = new int[] { 1,0,2,3,4,6,5,7};
+                            break;
+                            case 1: tileOrder = new int[] {2,1,4,0,7,3,6,5};
+                            break;
+                        }
+                break;
+            case 0: switch ((int)goalPos.y)
+                    {
+                        case -1:
+                            tileOrder = new int[] { 3,0,5,1,6,4,2,7};
+                            break;
+                        case 0:
+                            tileOrder = new int[] { 0,1,2,3,4,5,6,7};
+                            Debug.Log("Centre tile is the same as the goaltile");
+                            break;
+                        case 1:
+                            tileOrder = new int[] { 4,2,7,1,6,3,0,5};
+                            break;
+                    }
+                break;
+            case 1: switch ((int)goalPos.y)
+                    {
+                        case -1:
+                            tileOrder = new int[] { 5,2,6,0,7,1,4,2};
+                            break;
+                        case 0:
+                            tileOrder = new int[] { 6,5,7,3,4,1,0,2};
+                            
+                            break;
+                        case 1:
+                            tileOrder = new int[] {7,4,6,2,5,1,3,0};
+                            break;
+                    }
+                break;
+        }
+        for(int i = 0; i < tileOrder.Length; i++)
+        {
+            sortedAdjacentTile[i] = unSortedAdjacentTile[tileOrder[i]];
+        }
+        return sortedAdjacentTile;
+        /*Vector2 goalPos = new Vector2(goalTile.GetX() - givenTile.GetX(), goalTile.GetY() - givenTile.GetY());
+        goalPos = new Vector2(goalPos.x % 1, goalPos.y % 1);
+        
+        if (goalPos.x != 0 && goalPos.y != 0)
+        {
+            for (int i = 0; i < 9; i++)
+            {
+
+            }
+        }*/
+        /*Tile[] adjacentTile = GetAdjacent(givenTile);
         float[] tileLength = new float[adjacentTile.Length];
         for(int i = 0; i < adjacentTile.Length; i++)
         {
             tileLength[i] = GetTileDistance(adjacentTile[i], goalTile);
         }
         TestMain.QuickSort(tileLength, ref adjacentTile);
-        return adjacentTile;
+        return adjacentTile;*/
     }
     public bool IsAdjacent(Tile givenTile, Tile adjacentTile)
     {
-        return (Mathf.Abs(Mathf.Abs(givenTile.GetX()) - Mathf.Abs(adjacentTile.GetX())) <= 1
-            && Mathf.Abs(Mathf.Abs(givenTile.GetY()) - Mathf.Abs(adjacentTile.GetY())) <= 1);
+        if (givenTile == null || adjacentTile == null)
+        {
+            GetAdjacent(GetTile(new int[] { 0, 0 }), GetTile(new int[] { 2, 2 }));
+            return false;
+        }
+        else
+        {
+            return (Mathf.Abs(Mathf.Abs(givenTile.GetX()) - Mathf.Abs(adjacentTile.GetX())) <= 1
+                && Mathf.Abs(Mathf.Abs(givenTile.GetY()) - Mathf.Abs(adjacentTile.GetY())) <= 1);
+        }
     }
     public Tile[] FillArea(Tile[] outerPoint)
     {

@@ -27,7 +27,9 @@ public class TestMain : MonoBehaviour
     }
     public void Initialise()
     {
+       // Database serverDB = new Database();
         Debug.Log("test");
+        Database.StartDatabase();
         m_camera = new Camera[] { gameObject.GetComponent<Camera>()};
         GameObject canvasObj = new GameObject();
         m_canvas = canvasObj.AddComponent<Canvas>();
@@ -139,6 +141,8 @@ public class TestMain : MonoBehaviour
         givenArray = temp;
     }
 
+
+
     public static void QuickSort<T>(float[] givenFloat, ref T[] givenT)
     {
         float[] tempArray;
@@ -195,6 +199,10 @@ public class TestMain : MonoBehaviour
             givenT = tempT;
         }
         
+    }
+    void OnApplicationQuit()
+    {
+        Database.KillDatabase();
     }
 }
 
