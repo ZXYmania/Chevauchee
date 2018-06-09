@@ -283,8 +283,8 @@
     <Reference Include="SyntaxTree.VisualStudio.Unity.Bridge">
       <HintPath>C:/Program Files (x86)/Microsoft Visual Studio Tools for Unity/15.0/Editor/SyntaxTree.VisualStudio.Unity.Bridge.dll</HintPath>
     </Reference>
-    <Reference Include="Mono.Data.Sqlite">
-      <HintPath>Assets/Plugins/Mono.Data.Sqlite.dll</HintPath>
+    <Reference Include="Npgsql">
+      <HintPath>Assets/Plugins/Npgsql.dll</HintPath>
     </Reference>
     <Reference Include="System.Data">
       <HintPath>Assets/Plugins/System.Data.dll</HintPath>
@@ -313,9 +313,6 @@
     <Reference Include="UnityEngine.StandardEvents">
       <HintPath>C:/Users/Dean/AppData/LocalLow/Unity/cache/packages/packages.unity.com/com.unity.standardevents@1.0.10/UnityEngine.StandardEvents.dll</HintPath>
     </Reference>
-    <Reference Include="Npgsql">
-      <HintPath>Assets/Plugins/Npgsql.dll</HintPath>
-    </Reference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Assets\Resources\Scripts\Animation\Animated.cs" />
@@ -329,7 +326,9 @@
     <Compile Include="Assets\Resources\Scripts\BuildingTypes.cs" />
     <Compile Include="Assets\Resources\Scripts\Character.cs" />
     <Compile Include="Assets\Resources\Scripts\Culture.cs" />
-    <Compile Include="Assets\Resources\Scripts\Database.cs" />
+    <Compile Include="Assets\Resources\Scripts\Database\Database.cs" />
+    <Compile Include="Assets\Resources\Scripts\Database\Tables\TileTransaction.cs" />
+    <Compile Include="Assets\Resources\Scripts\Database\Transaction.cs" />
     <Compile Include="Assets\Resources\Scripts\Dictionary.cs" />
     <Compile Include="Assets\Resources\Scripts\Domain.cs" />
     <Compile Include="Assets\Resources\Scripts\Garrison.cs" />

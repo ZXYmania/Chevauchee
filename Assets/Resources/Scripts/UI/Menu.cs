@@ -12,8 +12,6 @@ public abstract class Menu
     {
         Canvas canvas = TestMain.GetCanvas();
         GameObject canvasObj = new GameObject();
-      //  canvas = canvasObj.AddComponent<Canvas>();
-        canvas.transform.position = new Vector3(0, 0, -3);
         m_item = new MenuItem[0];
     }
     public void Visible(bool givenVisible)

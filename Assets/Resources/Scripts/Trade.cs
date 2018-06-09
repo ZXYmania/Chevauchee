@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -82,11 +83,12 @@ public class TradeNetwork
     }
     public ResourceList[] DoDomesticTrade(Kingdom givenKingdom)
     {
-        string[] temp = givenKingdom.GetDomain();
+        Domain[] temp = givenKingdom.GetDomain();
         Domain[] realmDomain = new Domain [temp.Length];
         for(int i= 0; i < temp.Length; i++)
         {
-            realmDomain[i] = DomainDictionary.GetDomain(temp[i]);
+            throw new NotImplementedException();
+            //realmDomain[i] = DomainDictionary.GetDomain(temp[i].GetId());
         }
         for (int i = 0; i < realmDomain.Length; i++)
         {
@@ -110,7 +112,7 @@ public class TradeNetwork
         tradeRoute = SortTradeRoutes(tradeRoute);
         for (int i = 0; i < tradeRoute.Length; i++)
         {
-            Debug.Log(i + ": " + tradeRoute[i].GetNames() + ": " + tradeRoute[i].GetDistance());
+            //Debug.Log(i + ": " + tradeRoute[i].GetNames() + ": " + tradeRoute[i].GetDistance());
             tradeRoute[i].TradeBetweenPoints();
         }
         ResourceList tempProd = realmDomain[0].GetProduction();
@@ -119,7 +121,7 @@ public class TradeNetwork
         Debug.Log("net " + tempProd);
         for (int i =0; i < realmDomain.Length; i++)
         {
-            Debug.Log(realmDomain[i].GetName());
+            Debug.Log(realmDomain[i].GetId());
             for (int j = 0; j < ResourceList.AMOUNT_OF_RESOURCES; j++)
             {
                 if (ResourceList.ConvertInt(j) == resource.wheat
@@ -145,13 +147,13 @@ public class TradeNetwork
                 {
                     if (givenRoute[i].GetDistance() < givenRoute[pivot[0]].GetDistance())
                     {
-                        Debug.Log("iteration + " + pivot[1] + " :" + givenRoute[i].GetNames());
+                        //Debug.Log("iteration + " + pivot[1] + " :" + givenRoute[i].GetNames());
                         tempArray[pivot[1]] = givenRoute[i];
                         pivot[1]++;
                     }
                     else
                     {
-                        Debug.Log("if bigger iteration " + (tempArray.Length - pivot[2]) + ": " + givenRoute[i].GetNames());
+                        //Debug.Log("if bigger iteration " + (tempArray.Length - pivot[2]) + ": " + givenRoute[i].GetNames());
                         tempArray[tempArray.Length - pivot[2]] = givenRoute[i];
                         pivot[2]++;
                     }
@@ -186,7 +188,7 @@ public class TradeNetwork
 public class TradeRoute
 {
     Domain[] m_points;
-    public string GetNames() { return m_points[0].GetName() + ", " + m_points[1].GetName(); }
+    //public string GetNames() { return m_points[0].GetName() + ", " + m_points[1].GetName(); }
     float m_distance;
     public float GetDistance() { return m_distance; }
     public TradeRoute(Domain[] givenDomain, float givenDistance)
@@ -203,10 +205,10 @@ public class TradeRoute
     }
     public void TradeBetweenPoints()
     {
-
         for (int i = 0; i < ResourceList.AMOUNT_OF_RESOURCES; i++)
         {
-            if (m_points[0].GetName() == "port")
+            throw new NotImplementedException();
+            /*if (m_points[0].GetName() == "port")
             {
                 m_points[0].GiveResource(ResourceList.ConvertInt(i), m_points[0].GetResource(i));
             }
@@ -254,7 +256,7 @@ public class TradeRoute
                     test += "\n" + m_points[0].GetName() + ": " + m_points[0].GetResource(i) + ", " + m_points[1].GetName() + ": " + m_points[1].GetResource(i);
                     Debug.Log(test);
                 }
-            }
+            }*/
         }
     }
 }

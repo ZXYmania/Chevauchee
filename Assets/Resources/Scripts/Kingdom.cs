@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -60,36 +61,42 @@ public class Kingdom
     {
         TestMain.AddElement<Character>(ref duke, givenCharacter);
     }
-    public string[] GetDomain()
+    public Domain[] GetDomain()
     {
-        string[] realmDomain = new string[0];
+        Guid[] realmDomain = new Guid[0];
         if (emperor != null)
         {
-            TestMain.AddElement<string>(ref realmDomain, emperor.GetDomain());
+            throw new NotImplementedException();
+            //TestMain.AddElement<Domain>(ref realmDomain, emperor.GetDomain());
         }
         string[] kingTally = new string[0];
         for (int i = 0; i < king.Length; i++)
         {
-            TestMain.AddElement<string>(ref kingTally, king[i].GetDomain());
+            throw new NotImplementedException();
+            //TestMain.AddElement<Domain>(ref kingTally, king[i].GetDomain());
         }
-        TestMain.AddElement<string>(ref realmDomain, kingTally);
+        throw new NotImplementedException();
+       /* TestMain.AddElement<string>(ref realmDomain, kingTally);
         string[] dukeTally = new string[0];
         for (int i = 0; i < duke.Length; i++)
         {
-            TestMain.AddElement<string>(ref dukeTally, duke[i].GetDomain());
+            throw new NotImplementedException();
+            //TestMain.AddElement<string>(ref dukeTally, duke[i].GetDomain());
         }
         TestMain.AddElement<string>(ref realmDomain, dukeTally);
-        return realmDomain;
+        return realmDomain;*/
     }
-    public bool ContainsDomain(string givenDomain)
+    public bool ContainsDomain(Guid givenDomain)
     {
         Character[] allCharacter = GetAllCharacters();
         for(int i = 0; i < allCharacter.Length; i++)
         {
-            if(allCharacter[i].ControlsDomain(givenDomain))
+            throw new NotImplementedException();
+
+            /*if (allCharacter[i].ControlsDomain(givenDomain))
             {
                 return true;
-            }
+            }*/
         }
         return false;
     }

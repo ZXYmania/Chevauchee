@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -7,10 +8,10 @@ public class Domain
     //A list of all buildings controlled by the domain
     Tile[] m_tile;
     //m_building[0] is the capital.
-    public Tile GetCapital() { if (m_tile.Length < 1) { Debug.Log(m_name);return null; } else { return m_tile[0]; } }
+    public Tile GetCapital() { if (m_tile.Length < 1) { Debug.Log(m_Id);return null; } else { return m_tile[0]; } }
     Tile[] m_occupyingbuilding;
-    string m_name;
-    public string GetName() { return m_name; }
+    Guid m_Id;
+    public Guid GetId() { return m_Id; }
     private ResourceList m_resource;
     public ResourceList GetResource() { return m_resource; }
     public void GiveResource(resource givenResource, int givenAmount) {m_resource.Add(givenResource, givenAmount);}
@@ -20,9 +21,9 @@ public class Domain
     public int GetResource(int givenInt) {return m_resource.GetAmount(ResourceList.ConvertInt(givenInt)); }
     public int GetResource(resource givenResource) { return m_resource.GetAmount(givenResource); }
     
-    public Domain(string givenName)
+    public Domain()
     {
-        m_name = givenName;
+        m_Id = Guid.NewGuid();
         m_resource = new ResourceList();
         m_tile = new Tile[0];
     }
@@ -81,7 +82,7 @@ public class Domain
   }*/
     }
 
-    public void AddBuilding(int[] givenBuilding)
+    public void AddBuilding(Position givenBuilding)
     {
         Debug.Log("Building add " + TestMain.GetMap().GetTile(givenBuilding));
         TestMain.AddElement<Tile>(ref m_tile, TestMain.GetMap().GetTile(givenBuilding));

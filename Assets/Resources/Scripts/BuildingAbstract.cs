@@ -29,7 +29,7 @@ public abstract class Building : ClickAble
         if (newBuilding != null && builder.RulesDomain(givenTile.GetDomain()))
         {
             givenTile.AddBuilding(newBuilding);
-            DomainDictionary.GetDomain(givenTile.GetDomain()).AddBuilding(givenTile.GetPosition());
+           // DomainDictionary.GetDomain(givenTile.GetDomain()).AddBuilding(givenTile.GetPosition());
             return true;
         }
         else

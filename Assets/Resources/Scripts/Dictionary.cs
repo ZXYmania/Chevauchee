@@ -96,7 +96,7 @@ public static class DomainDictionary : object
 
     public static void AddDomain(string domainName, Character givenCharacter)
     {
-        Domain newDomain = new Domain(domainName);
+        Domain newDomain = new Domain();
         givenCharacter.AddDomain(newDomain);
         AllDomain.Add(domainName, newDomain);
         Length++;
@@ -144,7 +144,7 @@ public static class CharacterDictionary : object
     }
     public static void AddCharacter(string characterName, Domain givenDomain)
     {
-        Character newCharacter = new Character(givenDomain);
+        Character newCharacter = new Character(characterName);
         AllCharacter.Add(characterName, newCharacter);
         Length++;
     }
@@ -221,13 +221,13 @@ public class TileArray
         }
         return null;
     }
-    public Tile GetTile(int[] givenPosition)
+    public Tile GetTile(Position givenPosition)
     {
         if (TestMain.GetMap().GetTile(givenPosition) != null)
         {
             for (int i = 0; i < m_array.Length; i++)
             {
-                if (m_array[i][0].GetX() == givenPosition[0])
+                if (m_array[i][0].GetX() == givenPosition.x)
                 {
                     for(int j = 0; j < m_array[i].Length; j++)
                     {

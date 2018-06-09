@@ -43,6 +43,7 @@ public class TestMain : MonoBehaviour
         CharacterDictionary.Initialise();
         DomainDictionary.Initialise();
         m_map = new Map();
+        m_map.GenerateMap();
         CharacterDictionary.AddCharacter("Hannibal");
         CharacterDictionary.AddCharacter("Trajan");
         CharacterDictionary.AddCharacter("Pompeii");
@@ -60,10 +61,7 @@ public class TestMain : MonoBehaviour
         DomainDictionary.AddDomain("Ravenna", CharacterDictionary.GetCharacter("Trajan"));
         DomainDictionary.AddDomain("Milan", CharacterDictionary.GetCharacter("Caeser"));
         DomainDictionary.AddDomain("Ostia", CharacterDictionary.GetCharacter("Trajan"));
-        DomainDictionary.AddDomain("Persia", CharacterDictionary.GetCharacter("Darius"));
-
-        m_map.GenerateMap();
-       
+        DomainDictionary.AddDomain("Persia", CharacterDictionary.GetCharacter("Darius"));       
 
         Trade.Initialise();
         try
