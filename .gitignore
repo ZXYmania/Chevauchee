@@ -1,6 +1,6 @@
 .vs/
-Chevauchee/
-Library/
 Temp/
 UnityPackageManager/
-.vs/Chevauchee/v15/.suo
+*.udl
+Library/metadata/
+
