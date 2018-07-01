@@ -1,29 +1,71 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-//using Mono.Data.Sqlite;
 using System.Data;
+using System.Data.Common;
+using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore;
 using Npgsql;
-using UnityEngine;
+using System.Linq;
 
+
+using UnityEngine;
 public partial class Database
 {
-    static IDbConnection dbConnection;
+    public class DatabaseManager : DbContext
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseNpgsql(@"Host=localhost;Database=Chevauchee;Username=Chevauchee;Password=Chevauchee");
+        }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            modelBuilder.HasDefaultSchema("Chevauchee");
+            modelBuilder.Entity<Domain.DomainProperty>(entity =>
+            {
+                entity.ToTable("Domain");
+                entity.HasKey("id");
+                entity.Property("name");
+                entity.Property("character");
+            });
+            modelBuilder.Entity<Tile.TileProperty>(entity =>
+            {
+                entity.ToTable("Tile");
+                entity.HasKey(new string[] { "x", "y" });
+                entity.Property("terrain").IsRequired();
+                entity.HasOne<Domain.DomainProperty>().WithOne().HasForeignKey(typeof(Tile.TileProperty), "domain");
+            });
+        }
+        public DbSet<Tile.TileProperty> Tile { get; set; }
+        public DbSet<Domain.DomainProperty> Domain { get; set; }
+
+    }
+
     private static void DatabaseCreationCommand()
     {
-        dbConnection = new NpgsqlConnection("Server=localhost;Port=5432;User Id=Chevauchee; Password=Chevauchee;Database=postgres; pooling=false");
+        DbConnection dbConnection = new NpgsqlConnection("Server=localhost;Port=5432;User Id=Chevauchee; Password=Chevauchee;Database=postgres; pooling=false");
         dbConnection.Open();
         IDbCommand createDB = dbConnection.CreateCommand();
-        createDB.CommandText = "CREATE DATABASE chevauchee";
+        createDB.CommandText = "CREATE DATABASE \"Chevauchee\";";
         createDB.ExecuteNonQuery();
-        dbConnection.ChangeDatabase("chevauchee");
+        dbConnection.ChangeDatabase("Chevauchee");
         IDbCommand addExtensions = dbConnection.CreateCommand();
         addExtensions.CommandText = "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";";
         addExtensions.ExecuteNonQuery();
         IDbCommand createSchema = dbConnection.CreateCommand();
-        createSchema.CommandText = "CREATE SCHEMA chevauchee; ";
+        createSchema.CommandText = "CREATE SCHEMA Chevauchee; ";
         createSchema.ExecuteNonQuery();
-        IDbCommand createTable = dbConnection.CreateCommand();
+        using (DatabaseManager db = new DatabaseManager())
+        {
+            if(!db.Database.EnsureCreated())
+            {
+                throw new NonExistantKeyError("Database isn't found/created");
+            }
+            db.SaveChanges();
+        }
+        dbConnection.Close();
+        /*IDbCommand createTable = dbConnection.CreateCommand();
         createTable.CommandText = "CREATE TABLE chevauchee.character(id uuid PRIMARY KEY, name VARCHAR(20), gold integer, symbol_id uuid);";
         createTable.ExecuteNonQuery();
         createTable.CommandText = "CREATE TABLE chevauchee.kingdom(id uuid PRIMARY KEY, name varchar(20));";
@@ -47,11 +89,12 @@ public partial class Database
         foreignKey.CommandText = "ALTER TABLE chevauchee.tile ADD FOREIGN KEY(domain_id) REFERENCES chevauchee.domain(id);";
         foreignKey.ExecuteNonQuery();
         foreignKey.CommandText = "ALTER TABLE chevauchee.building ADD FOREIGN KEY(tile_x, tile_y) REFERENCES chevauchee.tile(x,y);";
-        foreignKey.ExecuteNonQuery();
+        foreignKey.ExecuteNonQuery();*/
     }
 
     public static void KillDatabase()
     {
+        DbConnection dbConnection = new NpgsqlConnection("Server=localhost;Port=5432;User Id=Chevauchee; Password=Chevauchee;Database=Chevauchee; pooling=false");
         IDbCommand deleteDatabase = dbConnection.CreateCommand();
         dbConnection.ChangeDatabase("postgres");
         deleteDatabase.CommandText = "DROP DATABASE chevauchee;";
@@ -62,6 +105,5 @@ public partial class Database
     public static void StartDatabase()
     {
         DatabaseCreationCommand();
- 
     }
 }

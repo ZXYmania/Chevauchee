@@ -44,7 +44,7 @@ public class TestMain : MonoBehaviour
         DomainDictionary.Initialise();
         m_map = new Map();
         m_map.GenerateMap();
-        CharacterDictionary.AddCharacter("Hannibal");
+        /*CharacterDictionary.AddCharacter("Hannibal");
         CharacterDictionary.AddCharacter("Trajan");
         CharacterDictionary.AddCharacter("Pompeii");
         CharacterDictionary.AddCharacter("Caeser");
@@ -73,7 +73,7 @@ public class TestMain : MonoBehaviour
             Debug.Log("Domain trade is unimplemented");
         }
         m_player = new Player[] { gameObject.AddComponent<Player>() };
-        m_player[0].Initialise(CharacterDictionary.GetCharacter("Trajan"));
+        m_player[0].Initialise(CharacterDictionary.GetCharacter("Trajan"));*/
     }
 
 

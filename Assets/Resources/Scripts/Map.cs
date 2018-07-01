@@ -1,10 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
-using System;
-using static Database;
 using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
 
 public enum PathType
 {
@@ -34,7 +32,7 @@ public class TileOutofBoundsException : System.Exception
 
 public class Map
 {
-    Dictionary<Position, Tile> m_map;
+    System.Collections.Generic.Dictionary<Position, Tile> m_map;
     int MAPWIDTH;
     int MAPHEIGHT;
     public Tile GetTile(Position givenPosition)
@@ -101,69 +99,91 @@ public class Map
         Color[] mapPixel = oceanMap.GetAnimation(0).GetSprite(0).texture.GetPixels();
         MAPWIDTH = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.width;
         MAPHEIGHT = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.height;
-        TileTransaction buildMap = TileTransaction.CreateTileTransaction();
-        for (int i = 0; i < mapPixel.Length; i++)
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            Color currentColour = mapPixel[i];
-            int xPos = i % MAPWIDTH;
-            int yPos = Mathf.FloorToInt(i / MAPWIDTH);
-            xPos--;
-            yPos--;
-            if (xPos > 0 && yPos > 0 && xPos < MAPWIDTH - 2 && yPos < MAPHEIGHT - 2)
+            for (int i = 0; i < mapPixel.Length; i++)
             {
-                Tile.Terrain currentTerrain = Tile.Terrain.blank;
-                int probability = UnityEngine.Random.Range(0, 10);
-                if (probability < 4)
+                Color currentColour = mapPixel[i];
+                Tile.TileProperty currentTile = new Tile.TileProperty();
+                Domain.DomainProperty environment = new Domain.DomainProperty();
+                environment.id = System.Guid.Empty;
+                environment.name = "Environment";
+                environment.character = System.Guid.Empty;
+                db.Domain.Add(environment);
+                currentTile.x = (i % MAPWIDTH) - 1;
+                currentTile.y = (Mathf.FloorToInt(i / MAPWIDTH)) - 1;
+                if (currentTile.x > 0 && currentTile.y > 0 && currentTile.x < MAPWIDTH - 2 && currentTile.y < MAPHEIGHT - 2)
                 {
-                    currentTerrain = Tile.Terrain.smooth;
+                    currentTile.terrain = Tile.Terrain.blank;
+                    currentTile.domain = environment.id;
+                    int probability = UnityEngine.Random.Range(0, 10);
+                    if (probability < 4)
+                    {
+                        currentTile.terrain = Tile.Terrain.smooth;
+                    }
+                    else if (probability < 7)
+                    {
+                        currentTile.terrain = Tile.Terrain.forest;
+                    }
+                    else if (probability < 9)
+                    {
+                        currentTile.terrain = Tile.Terrain.rough;
+                    }
+                    else
+                    {
+                        currentTile.terrain = Tile.Terrain.mountain;
+                    }
+
+                    db.Tile.Add(currentTile);
                 }
-                else if (probability < 7)
-                {
-                    currentTerrain = Tile.Terrain.forest;
-                }
-                else if (probability < 9)
-                {
-                    currentTerrain = Tile.Terrain.rough;
-                }
-                else
-                {
-                    currentTerrain = Tile.Terrain.mountain;
-                }
-                buildMap.AddNewTile(xPos-1, yPos-1, currentTerrain);
             }
+            db.SaveChanges();
         }
-        buildMap.ExecuteCommand();
 
     }
     public void CreateMapView()
     {
-        TileTransaction buildView = TileTransaction.CreateTileTransaction();
+
         Position origin = new Position ((int)TestMain.GetCamera().transform.position.x, (int)TestMain.GetCamera().transform.position.y);
-        Position[] bound = new Position[2];
-        bound[0] = new Position( origin.x - 5, origin.y - 5 );
-        bound[1] = new Position (origin.x + 5, origin.y + 5 );
-        buildView.SelectBounds(bound,false);
-        while(buildView.GetNextRow())
+        Position bottomLeft = new Position( origin.x - 5, origin.y - 5 );
+        Position topRight = new Position (origin.x + 5, origin.y + 5 );
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            Position m_position = buildView.GetPosition();
-            m_map.Add(m_position, Tile.LoadTile( m_position, buildView.GetTerrain(), Guid.Empty));
+            List<Tile.TileProperty> grid = db.Tile.Where(t => t.x > bottomLeft.x && t.y > bottomLeft.y && t.x < topRight.x && t.y < topRight.y).ToList();
+            foreach(Tile.TileProperty tile in grid)
+            {
+                Tile currentTile = new Tile(tile);
+                m_map.Add(currentTile.GetPosition(), currentTile);
+            }
         }
-        Task.Run(() => ExtendBound(bound));
+        Task.Run(() => ExtendBound(bottomLeft, topRight));
     }
 
-    private void ExtendBound(Position[]bound)
+    private void ExtendBound(Position bottomLeft, Position topRight)
     {
-        TileTransaction currentBounds = TileTransaction.CreateTileTransaction(); 
-        if(bound.Length!=2)
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            currentBounds.SelectBounds(bound, true);
+            bottomLeft.x -= 1;
+            topRight.x += 1;
+            List<Tile.TileProperty> rows = db.Tile.Where(t => t.x == bottomLeft.x && t.y > bottomLeft.y && t.x == topRight.x && t.y < topRight.y).ToList();
+            foreach (Tile.TileProperty tile in rows)
+            {
+                Tile currentTile = new Tile(tile);
+                m_map.Add(currentTile.GetPosition(), currentTile);
+            }
+            bottomLeft.y -= 1;
+            topRight.y += 1;
+            List<Tile.TileProperty> columns = db.Tile.Where(t => t.x > bottomLeft.x && t.y == bottomLeft.y && t.x > topRight.x && t.y == topRight.y).ToList();
+            foreach (Tile.TileProperty tile in columns)
+            {
+                Tile currentTile = new Tile(tile);
+                m_map.Add(currentTile.GetPosition(), currentTile);
+            }
+            if (rows.Count() != 0 || columns.Count() != 0) ;
+            {
+                ExtendBound(bottomLeft, topRight);
+            }
         }
-        while(currentBounds.GetNextRow())
-        {
-            Position m_position = currentBounds.GetPosition();
-            m_map.Add(m_position, Tile.LoadTile(m_position, currentBounds.GetTerrain(), currentBounds.GetDomain()));
-        }
-        throw new NonExistantKeyError("You used the wrong amount of bounds");
     }
    
 
@@ -645,7 +665,7 @@ public class Map
         if (newBuilding != null && givenCharacter.RulesDomain(givenTile.GetDomain()))
         {
             givenTile.AddBuilding(newBuilding);
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
             //DomainDictionary.GetDomain(givenTile.GetDomain()).AddBuilding(givenTile.GetPosition());
         }
         else

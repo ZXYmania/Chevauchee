@@ -231,7 +231,7 @@ public class TileArray
                 {
                     for(int j = 0; j < m_array[i].Length; j++)
                     {
-                        if(m_array[i][j].GetPosition() == givenPosition)
+                        if(m_array[i][j].GetPosition().Equals(givenPosition))
                         {
                             return m_array[i][j];
                         }

@@ -5,13 +5,19 @@ using UnityEngine;
 
 public class Domain 
 {
+    public class DomainProperty
+    {
+        public Guid id;
+        public string name;
+        public Guid character;
+    }
     //A list of all buildings controlled by the domain
     Tile[] m_tile;
     //m_building[0] is the capital.
-    public Tile GetCapital() { if (m_tile.Length < 1) { Debug.Log(m_Id);return null; } else { return m_tile[0]; } }
+    public Tile GetCapital() { if (m_tile.Length < 1) { Debug.Log(GetId());return null; } else { return m_tile[0]; } }
     Tile[] m_occupyingbuilding;
-    Guid m_Id;
-    public Guid GetId() { return m_Id; }
+    DomainProperty m_properties;
+    public Guid GetId() { return m_properties.id; }
     private ResourceList m_resource;
     public ResourceList GetResource() { return m_resource; }
     public void GiveResource(resource givenResource, int givenAmount) {m_resource.Add(givenResource, givenAmount);}
@@ -23,7 +29,10 @@ public class Domain
     
     public Domain()
     {
-        m_Id = Guid.NewGuid();
+        m_properties = new DomainProperty();
+        m_properties.id = Guid.NewGuid();
+        m_properties.name = "cool";
+        m_properties.character = Guid.NewGuid();
         m_resource = new ResourceList();
         m_tile = new Tile[0];
     }
