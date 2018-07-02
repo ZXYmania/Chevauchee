@@ -4,18 +4,24 @@ using System.Collections.Generic;
 using UnityEngine;
 public class Character
 {
-    //the state that you are head of
-    string m_state;
-    string m_name;
-    public string GetName() { return m_name; }
-	// Use this for initialization
+    public Character()
+    {
+
+    }
     public Character(string givenName)
     {
-        m_name = givenName;
+        id = Guid.NewGuid();
+        name = givenName;
     }
+
+    //the state that you are head of
+    public Guid id { get; protected set; }
+    public string name { get; protected set; }
+    public string GetName() { return name; }
+	// Use this for initialization
     public void Crown(string givenKingdom)
     {
-        m_state = givenKingdom;
+        throw new NotImplementedException();
     }
     public void AddDomain(Domain givenDomain)
     {

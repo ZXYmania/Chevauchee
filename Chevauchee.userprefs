@@ -1,10 +1,11 @@
 ﻿<Properties StartupItem="Chevauchee.csproj">
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Resources\Scripts\TestMain.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="Assets\Resources\Scripts\Database\Database.cs">
     <Files>
-      <File FileName="Assets\Resources\Scripts\Animation\Animated.cs" Line="85" Column="1" />
+      <File FileName="Assets\Resources\Scripts\Animation\Animated.cs" Line="1" Column="1" />
       <File FileName="Assets\Resources\Scripts\Tile.cs" Line="1" Column="1" />
       <File FileName="Assets\Resources\Scripts\TestMain.cs" Line="1" Column="1" />
+      <File FileName="Assets\Resources\Scripts\Database\Database.cs" Line="1" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

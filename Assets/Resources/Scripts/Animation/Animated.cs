@@ -26,7 +26,6 @@ public abstract class Animated : SecondDimension
         {
             foreach (KeyValuePair<string,AnimationLayer> item in m_animationLayer)
             {
-
                     if(item.Value.GetVisible())
                     {
                         item.Value.Animate();

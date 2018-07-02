@@ -32,7 +32,7 @@ public class TileOutofBoundsException : System.Exception
 
 public class Map
 {
-    System.Collections.Generic.Dictionary<Position, Tile> m_map;
+    Dictionary<Position, Tile> m_map;
     int MAPWIDTH;
     int MAPHEIGHT;
     public Tile GetTile(Position givenPosition)
@@ -60,42 +60,16 @@ public class Map
     }
     public Map()
     {
+        m_map = new Dictionary<Position, Tile>();
     }
     public void GenerateMap()
     {
-        m_map = new Dictionary<Position, Tile>();
-        //Italy Test Map
-        /*SpriteMap oceanMap = TextureController.GetAnimations("England_map", Color.black);
-        Color[] mapPixel = oceanMap.GetAnimation(0).GetSprite(0).texture.GetPixels();
-        MAPWIDTH = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.width;
-        MAPHEIGHT = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.height;
-        m_map = new Tile[MAPWIDTH][];
-        TileTransaction buildMap = TileTransaction.CreateTileTransaction();
-        for (int i = 0; i < MAPWIDTH; i++)
-        {
-            m_map[i] = new Tile[MAPHEIGHT];
-        }
-        for (int i = 0; i < mapPixel.Length; i++)
-        {
-            Color currentColour = mapPixel[i];
-            int xPos = i % MAPWIDTH;
-            int yPos = Mathf.FloorToInt(i / MAPWIDTH);
-            xPos--;
-            yPos--;
-            if (xPos > 0 && yPos > 0 && xPos < MAPWIDTH-2 && yPos < MAPHEIGHT-2)
-            {
-                LoadTileFromImage();
-                buildMap.AddNewItem(xPos, yPos, currentColour);
-            }
-        }
-        buildMap.ExecuteCommand();*/
         CreateMapDataBase();
-        CreateMapView();
     }
 
     public void CreateMapDataBase()
     {
-        SpriteMap oceanMap = TextureController.GetAnimations("England_map", Color.black);
+        SpriteMap oceanMap = TextureController.GetAnimations("Mediterranean_map", Color.black);
         Color[] mapPixel = oceanMap.GetAnimation(0).GetSprite(0).texture.GetPixels();
         MAPWIDTH = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.width;
         MAPHEIGHT = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.height;
@@ -104,86 +78,88 @@ public class Map
             for (int i = 0; i < mapPixel.Length; i++)
             {
                 Color currentColour = mapPixel[i];
-                Tile.TileProperty currentTile = new Tile.TileProperty();
-                Domain.DomainProperty environment = new Domain.DomainProperty();
-                environment.id = System.Guid.Empty;
-                environment.name = "Environment";
-                environment.character = System.Guid.Empty;
-                db.Domain.Add(environment);
-                currentTile.x = (i % MAPWIDTH) - 1;
-                currentTile.y = (Mathf.FloorToInt(i / MAPWIDTH)) - 1;
-                if (currentTile.x > 0 && currentTile.y > 0 && currentTile.x < MAPWIDTH - 2 && currentTile.y < MAPHEIGHT - 2)
+                int currX = (i % MAPWIDTH) - 1;
+                int currY = (Mathf.FloorToInt(i / MAPWIDTH)) - 1;
+                Tile.Terrain currTerrain;
+                if (currX > 0 && currY > 0 && currX < MAPWIDTH - 2 && currY < MAPHEIGHT - 2)
                 {
-                    currentTile.terrain = Tile.Terrain.blank;
-                    currentTile.domain = environment.id;
-                    int probability = UnityEngine.Random.Range(0, 10);
-                    if (probability < 4)
+                    if (mapPixel[i] == Color.black)
                     {
-                        currentTile.terrain = Tile.Terrain.smooth;
-                    }
-                    else if (probability < 7)
-                    {
-                        currentTile.terrain = Tile.Terrain.forest;
-                    }
-                    else if (probability < 9)
-                    {
-                        currentTile.terrain = Tile.Terrain.rough;
+                        currTerrain = Tile.Terrain.ocean;
                     }
                     else
                     {
-                        currentTile.terrain = Tile.Terrain.mountain;
+                        int probability = UnityEngine.Random.Range(0, 10);
+                        if (probability < 4)
+                        {
+                            currTerrain = Tile.Terrain.smooth;
+                        }
+                        else if (probability < 7)
+                        {
+                            currTerrain = Tile.Terrain.forest;
+                        }
+                        else if (probability < 9)
+                        {
+                            currTerrain = Tile.Terrain.rough;
+                        }
+                        else
+                        {
+                            currTerrain = Tile.Terrain.mountain;
+                        }
                     }
-
-                    db.Tile.Add(currentTile);
+                    db.Tile.Add(new Tile(currX, currY, currTerrain, TestMain.environmentDomain));
                 }
             }
             db.SaveChanges();
         }
 
     }
-    public void CreateMapView()
+    public void CreateMapView(ref Position bottomLeft, ref Position topRight)
     {
-
-        Position origin = new Position ((int)TestMain.GetCamera().transform.position.x, (int)TestMain.GetCamera().transform.position.y);
-        Position bottomLeft = new Position( origin.x - 5, origin.y - 5 );
-        Position topRight = new Position (origin.x + 5, origin.y + 5 );
+        int step = 50;
+        bottomLeft.x -= step;
+        bottomLeft.y -= step;
+        topRight.x += step;
+        topRight.y += step;
+        Position tempMin = bottomLeft;
+        Position tempMax = topRight;
         using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            List<Tile.TileProperty> grid = db.Tile.Where(t => t.x > bottomLeft.x && t.y > bottomLeft.y && t.x < topRight.x && t.y < topRight.y).ToList();
-            foreach(Tile.TileProperty tile in grid)
+            List<Tile> grid = db.Tile.Where(t => t.x > tempMin.x && t.y > tempMin.y && t.x < tempMax.x && t.y < tempMax.y).ToList();
+            foreach(Tile currentTile in grid)
             {
-                Tile currentTile = new Tile(tile);
+                currentTile.LoadTile();
                 m_map.Add(currentTile.GetPosition(), currentTile);
             }
         }
-        Task.Run(() => ExtendBound(bottomLeft, topRight));
+        //Task.Run(() => ExtendBound(bottomLeft, topRight));
     }
 
-    private void ExtendBound(Position bottomLeft, Position topRight)
+    public bool ExtendBound(ref Position bottomLeft, ref Position topRight)
     {
         using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            bottomLeft.x -= 1;
-            topRight.x += 1;
-            List<Tile.TileProperty> rows = db.Tile.Where(t => t.x == bottomLeft.x && t.y > bottomLeft.y && t.x == topRight.x && t.y < topRight.y).ToList();
-            foreach (Tile.TileProperty tile in rows)
+            Position tempMin = bottomLeft;
+            Position tempMax = topRight;
+            int step = 10;
+            List<Tile> tile = db.Tile.Where(t => (((t.x <= tempMin.x && t.x > tempMin.x - step) 
+                                                 || (t.x >= tempMax.x && t.x < tempMax.x + step))
+                                                 && (t.y > tempMin.y - step && t.y < tempMax.y + step)) 
+                                                 ||
+                                                 (((t.y <= tempMin.y && t.y > tempMin.y - step) 
+                                                 || (t.y >= tempMax.y && t.y < tempMax.y + step))
+                                                 && (t.x > tempMin.x - step && t.x < tempMax.x + step))).ToList();
+            foreach (Tile currentTile in tile)
             {
-                Tile currentTile = new Tile(tile);
+                currentTile.LoadTile();
                 m_map.Add(currentTile.GetPosition(), currentTile);
             }
-            bottomLeft.y -= 1;
-            topRight.y += 1;
-            List<Tile.TileProperty> columns = db.Tile.Where(t => t.x > bottomLeft.x && t.y == bottomLeft.y && t.x > topRight.x && t.y == topRight.y).ToList();
-            foreach (Tile.TileProperty tile in columns)
-            {
-                Tile currentTile = new Tile(tile);
-                m_map.Add(currentTile.GetPosition(), currentTile);
-            }
-            if (rows.Count() != 0 || columns.Count() != 0) ;
-            {
-                ExtendBound(bottomLeft, topRight);
-            }
+            bottomLeft.x -= step;
+            topRight.x += step;
+            bottomLeft.y -= step;
+            topRight.y += step;
         }
+        return (bottomLeft.x - topRight.x) > 100;
     }
    
 

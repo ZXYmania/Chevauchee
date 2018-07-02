@@ -20,13 +20,7 @@ public struct Position
 
 public class Tile : ClickAble
 {
-    public class TileProperty
-    {
-        public int x;
-        public int y;
-        public Guid domain { get; set; }
-        public Tile.Terrain terrain;
-    }
+
     public enum Terrain
     {
         blank = 0,
@@ -57,10 +51,13 @@ public class Tile : ClickAble
             default: return false;
         }
     }
-    private TileProperty m_properties;
-    public Position GetPosition() { return new Position(m_properties.x, m_properties.y);}
-    public int GetX() { return m_properties.x;}
-    public int GetY() { return m_properties.y;}
+    public int x { get; protected set; }
+    public int y { get; protected set; }
+    public Guid domain { get; protected set; }
+    public Tile.Terrain terrain { get; protected set; }
+    public Position GetPosition() { return new Position(x, y);}
+    public int GetX() { return x;}
+    public int GetY() { return y;}
     Building[] m_building;
     public Building[] GetBuildings() { return m_building; }
     ModeType currentMode;
@@ -68,49 +65,35 @@ public class Tile : ClickAble
     public void Selected(bool givenSelected, Player givenPlayer) { m_animation.Select(givenSelected);}
     public bool IsSelected() { return m_animation.IsSelected(); }
     public void Hover(bool givenHover, Player givenPlayer) { m_animation.Select(givenHover);}
-    public Tile(TileProperty givenProperty)
+
+    public Tile()
     {
-        Initialise(givenProperty);
+
     }
-    public Tile(int givenX, int givenY, Terrain givenTerrain, Domain.DomainProperty givenDomain)
+
+    public Tile(int givenX, int givenY, Terrain givenTerrain, Domain givenDomain)
     {
         Initialise(givenX, givenY, givenTerrain, givenDomain);
     }
-    public Tile(Position givenPos, Terrain givenTerrain, Domain.DomainProperty givenDomain)
+    public Tile(Position givenPos, Terrain givenTerrain, Domain givenDomain)
     {
         Initialise(givenPos.x, givenPos.y, givenTerrain, givenDomain);
     }
 
-    protected void Initialise(TileProperty givenProperty)
+    protected void Initialise(int givenX, int givenY, Terrain givenTerrain, Domain givenDomain)
     {
-        m_building = new Building[0];
-        m_properties = givenProperty;
-        m_animation = TileAnimation.CreateAnimation();
+        x = givenX;
+        y = givenY;
+        terrain = givenTerrain;
+        domain = givenDomain.id;
+
+    }
+    public void LoadTile()
+    {
+        m_animation = TileAnimation.CreateAnimation(x,y,terrain,domain);
         m_animation.gameObject.layer = LayerMask.NameToLayer("Tile");
         m_animation.gameObject.name = ToString();
     }
-    protected void Initialise(int givenX, int givenY, Terrain givenTerrain, Domain.DomainProperty givenDomain)
-    {
-        TileProperty tileProperty = new TileProperty();
-        tileProperty.x = givenX;
-        tileProperty.y = givenY;
-        tileProperty.terrain = givenTerrain;
-        tileProperty.domain = givenDomain.id;
-        Initialise(tileProperty);
-
-    }
-
-    /*protected void Initialise(int givenX, int givenY)
-    {        
-        m_building = new Building[0];
-        m_properties.terrain = Terrain.blank;
-        m_properties.domain = Guid.Empty;
-        m_properties.x = givenX;
-        m_properties.y = givenY;
-        m_animation = TileAnimation.CreateAnimation();
-        m_animation.gameObject.layer = LayerMask.NameToLayer("Tile");
-        m_animation.gameObject.name = ToString();
-    }*/
 
     public void Update()
     {
@@ -128,7 +111,7 @@ public class Tile : ClickAble
                         m_animation.SetBuilding(m_building[0]);
                         m_animation.ShowBuilding(true);
                     }
-                    else if (m_properties.domain != null)
+                    else if (domain != null)
                     {
                         if (currentPlayer.GetCharacter().RulesDomain(GetDomain()))
                         {
@@ -145,7 +128,7 @@ public class Tile : ClickAble
                     break;
                 case ModeType.observe:
                     if (m_building.Length > 0){ m_animation.ShowBuilding(true);}
-                    else if (m_properties.domain != null)
+                    else if (domain != null)
                     {
                         throw new NotImplementedException();
                         //m_animationLayer["Overlay"].SetVisible(true);ChangeSpriteMap("Overlay", m_domain);
@@ -156,7 +139,7 @@ public class Tile : ClickAble
         }
     }
 
-    public Terrain GetTerrain() { return m_properties.terrain; }
+    public Terrain GetTerrain() { return terrain; }
     public float GetObstacle(PathType givenPathtype)
     {
         switch (givenPathtype)
@@ -166,7 +149,7 @@ public class Tile : ClickAble
             {
                 return 0.8f;
             }
-            switch (m_properties.terrain)
+            switch (terrain)
             {
                 case Terrain.ocean: return -1;
                 case Terrain.mountain: return -1;
@@ -176,7 +159,7 @@ public class Tile : ClickAble
                 default: return 1;
             }
             case PathType.NavalRoute:
-                switch (m_properties.terrain)
+                switch (terrain)
                 {
                     case Terrain.ocean: return 1;
                     default: return -1;
@@ -191,7 +174,7 @@ public class Tile : ClickAble
                 }
                 return -1;
             case PathType.ImpassableTerrain:
-                switch(m_properties.terrain)
+                switch(terrain)
                 {
                     case Terrain.mountain: return -1;
                     case Terrain.ocean: return -1;
@@ -216,13 +199,13 @@ public class Tile : ClickAble
             Debug.Log("Domain "+ givenDomain +" not set ");
         }*/
     }
-    public Guid GetDomain() { return m_properties.domain; }
+    public Guid GetDomain() { return domain; }
     public void SetTerrain(Terrain givenTerrain)
     {
-        if(m_properties.terrain == Terrain.blank || givenTerrain == Terrain.ocean)
+        if(terrain == Terrain.blank)
         {
-            m_properties.terrain = givenTerrain;
-            m_animation.SetTerrain(m_properties.terrain);
+            terrain = givenTerrain;
+            m_animation.SetTerrain(terrain);
         }
     }
 
@@ -263,8 +246,17 @@ public class Tile : ClickAble
         }
         return false;
     }
+
+
     private class TileAnimation : Animated
     {
+        public static TileAnimation CreateAnimation(int givenX, int givenY, Terrain givenTerrain, Guid givenDomain)
+        {
+            TileAnimation outPut = CreateAnimation();
+            outPut.SetTransform(new Vector2(givenX, givenY));
+            outPut.SetTerrain(givenTerrain);
+            return outPut;
+        }
         public static TileAnimation CreateAnimation()
         {
             GameObject m_gameObject = new GameObject();
@@ -277,6 +269,7 @@ public class Tile : ClickAble
             outPutTile.Initialise();
             return outPutTile;
         }
+
         protected override void Initialise()
         {
             base.Initialise();
@@ -286,7 +279,7 @@ public class Tile : ClickAble
             ChangeAnimation("Terrain", (int)Terrain.blank);
             m_animationLayer["Selected"].SetVisible(false);
         }
-        public void Update()
+        void Update()
         {
             Animate();
         }

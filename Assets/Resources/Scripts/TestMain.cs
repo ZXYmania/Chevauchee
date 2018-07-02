@@ -1,6 +1,8 @@
-﻿using System;
+﻿using Npgsql;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using UnityEngine;
 
 public class TestMain : MonoBehaviour
@@ -8,6 +10,8 @@ public class TestMain : MonoBehaviour
     // Use this for initialization
     private static Camera[] m_camera;
     private static Canvas m_canvas;
+    public static Domain environmentDomain { get; protected set; }
+    public static Character environmentCharacter { get; protected set; }
     public static void MoveCamera(int givenX, int givenY)
     {
         m_camera[0].transform.position = new Vector3(givenX, givenY, m_camera[0].transform.position.z);
@@ -29,7 +33,6 @@ public class TestMain : MonoBehaviour
     {
        // Database serverDB = new Database();
         Debug.Log("test");
-        Database.StartDatabase();
         m_camera = new Camera[] { gameObject.GetComponent<Camera>()};
         GameObject canvasObj = new GameObject();
         m_canvas = canvasObj.AddComponent<Canvas>();
@@ -39,11 +42,26 @@ public class TestMain : MonoBehaviour
     }
     public void CreateGameState()
     { 
-        KingdomDictionary.Initialise();
-        CharacterDictionary.Initialise();
-        DomainDictionary.Initialise();
         m_map = new Map();
-        m_map.GenerateMap();
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            if (db.Database.EnsureCreated())
+            {
+                environmentCharacter = new Character("Environment");
+                environmentDomain = new Domain("Environment", environmentCharacter);
+                db.Character.Add(environmentCharacter);
+                db.Domain.Add(environmentDomain);
+                db.SaveChanges();
+                m_map.GenerateMap();
+            }
+            else
+            {
+                Debug.Log("Map has NOT been loaded");
+            }
+        }
+        m_player = new Player[] { gameObject.AddComponent<Player>() };
+        Character firstPlayer = new Character("Trajan");
+        m_player[0].Initialise(firstPlayer);
         /*CharacterDictionary.AddCharacter("Hannibal");
         CharacterDictionary.AddCharacter("Trajan");
         CharacterDictionary.AddCharacter("Pompeii");
@@ -89,7 +107,7 @@ public class TestMain : MonoBehaviour
 		if (Input.GetKeyDown(KeyCode.Space))
         {
             Debug.Log("Space");
-            Trade.StartTradeKingdom("Rome");
+            //Trade.StartTradeKingdom("Rome");
         }
     }
 

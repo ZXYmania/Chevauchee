@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public static class Trade : object
@@ -11,7 +12,12 @@ public static class Trade : object
     public static void Initialise()
     {
         m_network = new TradeNetwork[1] { new TradeNetwork() };
-        m_network[0].AddKingdom(KingdomDictionary.GetKingdom("Rome"));
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            Character currentCharacter = TestMain.GetPlayer().GetCharacter();
+            throw new NotImplementedException();
+            //m_network[0].AddKingdom(db.Kingdom.Single(k => k.king.Contains(currentCharacter.id)));
+        }
     }
     public static void StartTrade()
     {
@@ -27,9 +33,10 @@ public static class Trade : object
         //receive imports
             //Tell other node to pay out imports
     }
-    public static void StartTradeKingdom(string givenKingdom)
+    public static void StartTradeKingdom(Guid givenKingdom)
     {
-        m_network[0].DoDomesticTrade(KingdomDictionary.GetKingdom(givenKingdom));
+        throw new NotImplementedException();
+           // m_network[0].DoDomesticTrade(db.Kingdom.Single(k => k.king.Contains));
     }
 }
 
@@ -59,9 +66,11 @@ public class TradeNetwork
     }
     public void DoNetworkTrade()
     {
-        for(int i = 0; i < ResourceList.AMOUNT_OF_RESOURCES; i++)
+        throw new NotImplementedException();
+
+        /*for (int i = 0; i < ResourceList.AMOUNT_OF_RESOURCES; i++)
         {
-            //If there is a surplis
+            //If there is a surplus
             if(networkResource.GetAmount(ResourceList.ConvertInt(i)) > 0)
             {
                 foreach(KeyValuePair<string, Kingdom> currKingdom in KingdomDictionary.GetDictionary())
@@ -79,10 +88,12 @@ public class TradeNetwork
                     //Everyone sells all their resources
                 }
             }
-        }
+        }*/
     }
     public ResourceList[] DoDomesticTrade(Kingdom givenKingdom)
     {
+        throw new NotImplementedException();
+        /*
         Domain[] temp = givenKingdom.GetDomain();
         Domain[] realmDomain = new Domain [temp.Length];
         for(int i= 0; i < temp.Length; i++)
@@ -133,6 +144,7 @@ public class TradeNetwork
         }
         ResourceList[] resourceTally = new ResourceList[0];
         return resourceTally;
+        */
     }
     public TradeRoute[] SortTradeRoutes(TradeRoute[] givenRoute)
     {
