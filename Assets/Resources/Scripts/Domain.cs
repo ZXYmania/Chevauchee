@@ -1,16 +1,16 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Domain 
 {
-    //A list of all buildings controlled by the domain
-    Tile[] m_tile;
-    //m_building[0] is the capital.
-    public Tile GetCapital() { if (m_tile.Length < 1) { Debug.Log(m_name);return null; } else { return m_tile[0]; } }
-    Tile[] m_occupyingbuilding;
-    string m_name;
-    public string GetName() { return m_name; }
+
+    public Guid id { get; protected set; }
+    public string name { get; protected set; }
+    public Guid character { get; protected set; }
+    public Guid GetId() { return id; }
     private ResourceList m_resource;
     public ResourceList GetResource() { return m_resource; }
     public void GiveResource(resource givenResource, int givenAmount) {m_resource.Add(givenResource, givenAmount);}
@@ -20,12 +20,25 @@ public class Domain
     public int GetResource(int givenInt) {return m_resource.GetAmount(ResourceList.ConvertInt(givenInt)); }
     public int GetResource(resource givenResource) { return m_resource.GetAmount(givenResource); }
     
-    public Domain(string givenName)
+    public Domain()
     {
-        m_name = givenName;
         m_resource = new ResourceList();
-        m_tile = new Tile[0];
     }
+    public Domain(string givenName, Character givenCharacter) : this()
+    {
+        name = givenName;
+        character = givenCharacter.id;
+    }
+
+    public Tile GetCapital()
+    {
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            Tile capitalProperty = db.Tile.Single(t => t.domain == GetId());
+            return capitalProperty;
+        }
+    }
+
     public void CountResource()
     {
         m_resource.Clear();
@@ -35,12 +48,16 @@ public class Domain
     public ResourceList GetMaintenance()
     {
         ResourceList totalmaintenance = new ResourceList();
-        for (int i = 0; i < m_tile.Length; i++)
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            Building[] currentBuilding = m_tile[i].GetBuildings();
-            for (int j = 0; j < currentBuilding.Length; j++)
+            List<Tile> m_tile = db.Tile.Where(t => t.domain == GetId()).ToList();
+            foreach (Tile currTile in m_tile)
             {
-                totalmaintenance.Add(currentBuilding[j].GetMaintenance());
+                Building[] currentBuilding = currTile.GetBuildings();
+                for (int i = 0; i < currentBuilding.Length; i++)
+                {
+                    totalmaintenance.Add(currentBuilding[i].GetMaintenance());
+                }
             }
         }
         return totalmaintenance;
@@ -48,14 +65,18 @@ public class Domain
     public ResourceList GetProduction()
     {
         ResourceList totalproduction = new ResourceList();
-        for (int i = 0; i < m_tile.Length; i++)
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            Building[] currentBuilding = m_tile[i].GetBuildings();
-            for (int j = 0; j < currentBuilding.Length; j++ )
+            List<Tile> m_tile = db.Tile.Where(t => t.domain == GetId()).ToList();
+            foreach (Tile currTile in m_tile)
             {
-                if (currentBuilding[j] is Industrial)
+                Building[] currentBuilding = currTile.GetBuildings();
+                for (int i = 0; i < currentBuilding.Length; i++)
                 {
-                    totalproduction.Add(((Industrial)currentBuilding[j]).ProduceResource());
+                    if (currentBuilding[i] is Industrial)
+                    {
+                        totalproduction.Add(((Industrial)currentBuilding[i]).ProduceResource());
+                    }
                 }
             }
         }
@@ -81,11 +102,7 @@ public class Domain
   }*/
     }
 
-    public void AddBuilding(int[] givenBuilding)
-    {
-        Debug.Log("Building add " + TestMain.GetMap().GetTile(givenBuilding));
-        TestMain.AddElement<Tile>(ref m_tile, TestMain.GetMap().GetTile(givenBuilding));
-    }
+
     //public void SpreadCulture();
 
 }

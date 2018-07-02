@@ -1,7 +1,8 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEditor;
+using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
 
 public enum PathType
 {
@@ -31,39 +32,12 @@ public class TileOutofBoundsException : System.Exception
 
 public class Map
 {
-    Tile[][] m_map;
+    Dictionary<Position, Tile> m_map;
     int MAPWIDTH;
     int MAPHEIGHT;
-    int count;
-    bool HighCount() { return count > 2000; }
-    public Tile GetTile(int[] givenPosition)
+    public Tile GetTile(Position givenPosition)
     {
-        if (givenPosition.Length == 2)
-        {
-            if (givenPosition[0] >= 0 && givenPosition[0] < MAPWIDTH &&
-                givenPosition[1] >= 0 && givenPosition[1] < MAPHEIGHT)
-            {
-                return m_map[givenPosition[0]][givenPosition[1]];
-            }
-            throw new TileOutofBoundsException("Position " + givenPosition[0] + ", " + givenPosition[1] + " is out of bounds");
-        }
-        throw new TileOutofBoundsException("Position " + givenPosition.Length +", is the wrong amount of elements for a position");
-    }
-    public Tile GetTile(Vector2 givenPosition)
-    {
-        if (givenPosition != null)
-        {
-            int intPosX = (int)givenPosition.x;
-            int intPosY = (int)givenPosition.y;
-            if (intPosX >= 0 && intPosX < MAPWIDTH &&
-                intPosY >= 0 && intPosY < MAPHEIGHT)
-            {
-
-                return m_map[intPosX][intPosY];
-            }
-            throw new TileOutofBoundsException("Position " + givenPosition[0] + ", " + givenPosition[1] + " is out of bounds");
-        }
-        throw new TileOutofBoundsException("Position is a null vector");
+        return m_map[givenPosition];
     }
     public static int[] GetDirection(Tile startTile, Tile endTile)
     {
@@ -86,70 +60,108 @@ public class Map
     }
     public Map()
     {
-        MAPHEIGHT = 50;
-        MAPWIDTH = 50;
+        m_map = new Dictionary<Position, Tile>();
     }
     public void GenerateMap()
     {
-        //Italy Test Map
+        CreateMapDataBase();
+    }
+
+    public void CreateMapDataBase()
+    {
         SpriteMap oceanMap = TextureController.GetAnimations("Mediterranean_map", Color.black);
         Color[] mapPixel = oceanMap.GetAnimation(0).GetSprite(0).texture.GetPixels();
         MAPWIDTH = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.width;
         MAPHEIGHT = (int)oceanMap.GetAnimation(0).GetSprite(0).texture.height;
-        m_map = new Tile[MAPWIDTH][];
-        for (int i = 0; i < MAPWIDTH; i++)
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            m_map[i] = new Tile[MAPHEIGHT];
-        }
-        for (int i = 0; i < mapPixel.Length; i++)
-        {
-            Color currentColour = mapPixel[i];
-            int xPos = i % MAPWIDTH;
-            int yPos = Mathf.FloorToInt(i / MAPWIDTH);
-            xPos--;
-            yPos--;
-            if (xPos > 0 && yPos > 0 && xPos < MAPWIDTH-2 && yPos < MAPHEIGHT-2)
+            for (int i = 0; i < mapPixel.Length; i++)
             {
-                m_map[xPos][yPos] = Tile.CreateTile(xPos, yPos);
-                if (currentColour == Color.black)
+                Color currentColour = mapPixel[i];
+                int currX = (i % MAPWIDTH) - 1;
+                int currY = (Mathf.FloorToInt(i / MAPWIDTH)) - 1;
+                Tile.Terrain currTerrain;
+                if (currX > 0 && currY > 0 && currX < MAPWIDTH - 2 && currY < MAPHEIGHT - 2)
                 {
-                    m_map[xPos][yPos].SetTerrain(Tile.Terrain.ocean);
-                }
-                else if (currentColour == Color.blue)
-                {
-                    m_map[xPos][yPos].SetDomain("Ostia");
-                }
-                else if (currentColour == Color.red)
-                {
-                    m_map[xPos][yPos].SetDomain("Milan");
-                }
-                else if (currentColour == Color.green)
-                {
-                    m_map[xPos][yPos].SetDomain("Ravenna");
-                }
-                else if (currentColour == new Color(1, 1, 0, 1))
-                {
-                    m_map[xPos][yPos].SetDomain("Persia");
-                }
-                else if (currentColour == new Color(1, 0, 1, 1))
-                {
-                    m_map[xPos][yPos].SetDomain("Carthage");
-                }
-                else if (currentColour == Color.white)
-                {
-
-                }
-                else
-                {
-                    throw new KeyNotFoundException("The Colour " + currentColour + " was not found.");
+                    if (mapPixel[i] == Color.black)
+                    {
+                        currTerrain = Tile.Terrain.ocean;
+                    }
+                    else
+                    {
+                        int probability = UnityEngine.Random.Range(0, 10);
+                        if (probability < 4)
+                        {
+                            currTerrain = Tile.Terrain.smooth;
+                        }
+                        else if (probability < 7)
+                        {
+                            currTerrain = Tile.Terrain.forest;
+                        }
+                        else if (probability < 9)
+                        {
+                            currTerrain = Tile.Terrain.rough;
+                        }
+                        else
+                        {
+                            currTerrain = Tile.Terrain.mountain;
+                        }
+                    }
+                    db.Tile.Add(new Tile(currX, currY, currTerrain, TestMain.environmentDomain));
                 }
             }
+            db.SaveChanges();
         }
+
+    }
+    public void CreateMapView(ref Position bottomLeft, ref Position topRight)
+    {
+        int step = 50;
+        bottomLeft.x -= step;
+        bottomLeft.y -= step;
+        topRight.x += step;
+        topRight.y += step;
+        Position tempMin = bottomLeft;
+        Position tempMax = topRight;
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            List<Tile> grid = db.Tile.Where(t => t.x > tempMin.x && t.y > tempMin.y && t.x < tempMax.x && t.y < tempMax.y).ToList();
+            foreach(Tile currentTile in grid)
+            {
+                currentTile.LoadTile();
+                m_map.Add(currentTile.GetPosition(), currentTile);
+            }
+        }
+        //Task.Run(() => ExtendBound(bottomLeft, topRight));
     }
 
-
-
-
+    public bool ExtendBound(ref Position bottomLeft, ref Position topRight)
+    {
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            Position tempMin = bottomLeft;
+            Position tempMax = topRight;
+            int step = 10;
+            List<Tile> tile = db.Tile.Where(t => (((t.x <= tempMin.x && t.x > tempMin.x - step) 
+                                                 || (t.x >= tempMax.x && t.x < tempMax.x + step))
+                                                 && (t.y > tempMin.y - step && t.y < tempMax.y + step)) 
+                                                 ||
+                                                 (((t.y <= tempMin.y && t.y > tempMin.y - step) 
+                                                 || (t.y >= tempMax.y && t.y < tempMax.y + step))
+                                                 && (t.x > tempMin.x - step && t.x < tempMax.x + step))).ToList();
+            foreach (Tile currentTile in tile)
+            {
+                currentTile.LoadTile();
+                m_map.Add(currentTile.GetPosition(), currentTile);
+            }
+            bottomLeft.x -= step;
+            topRight.x += step;
+            bottomLeft.y -= step;
+            topRight.y += step;
+        }
+        return (bottomLeft.x - topRight.x) > 100;
+    }
+   
 
     public Tile[] GetBestPath(Tile startTile, Tile endTile, PathType givenPathType)
     {
@@ -163,14 +175,14 @@ public class Map
             {
                 for (int i = 0; i < Mathf.Abs(direction[0]); i++)
                 {
-                    int[] nextTilepos = bestPath.GetLastItem().GetPosition();
+                    Position nextTilepos = bestPath.GetLastItem().GetPosition();
                     lastItem = GetTile(nextTilepos);
                     //formatting from float to int hack
                     if ((i < (Mathf.Abs((float)direction[1] / 2)) || i >= (Mathf.Abs((float)direction[0]) - (Mathf.Abs((float)direction[1]) / 2))))
                     {
                         //go diagonal in direction[0]
-                        nextTilepos[0] += direction[0] / (int)Mathf.Abs(direction[0]);
-                        nextTilepos[1] += direction[1] / (int)Mathf.Abs(direction[1]);
+                        nextTilepos.x += direction[0] / (int)Mathf.Abs(direction[0]);
+                        nextTilepos.y += direction[1] / (int)Mathf.Abs(direction[1]);
                         if (direction[1] % 2 == 1 && Mathf.Abs(direction[0]) - i < 1)
                         {
                             direction[1] -= direction[1] / (int)Mathf.Abs(direction[1]);
@@ -179,7 +191,7 @@ public class Map
                     else
                     {
                         //go in direction[0]
-                        nextTilepos[0] += direction[0] / (int)Mathf.Abs(direction[0]);
+                        nextTilepos.x += direction[0] / (int)Mathf.Abs(direction[0]);
                     }
                     bestPath.Add(GetTile(nextTilepos));
                 }
@@ -188,14 +200,14 @@ public class Map
             else //if (difference < 0)
             {
 
-                int[] nextTilepos = bestPath.GetLastItem().GetPosition();
+                Position nextTilepos = bestPath.GetLastItem().GetPosition();
                 for (int i = 0; i < Mathf.Abs(direction[1]); i++)
                 {
                     if ((i < (Mathf.Abs((float)direction[0] / 2)) || i >= (Mathf.Abs((float)direction[1])- (Mathf.Abs((float)direction[0]) / 2))))
                     {
                         //go diagonal in direction[1]
-                        nextTilepos[0] += direction[0] / (int)Mathf.Abs(direction[0]);
-                        nextTilepos[1] += direction[1] / (int)Mathf.Abs(direction[1]);
+                        nextTilepos.x += direction[0] / (int)Mathf.Abs(direction[0]);
+                        nextTilepos.y += direction[1] / (int)Mathf.Abs(direction[1]);
                         if (direction[0] % 2 == 1 && Mathf.Abs(direction[0]) -i < 1)
                         {
                             direction[0] -= direction[0] / (int)Mathf.Abs(direction[0]);
@@ -204,7 +216,7 @@ public class Map
                     else
                     {
                         //go in direction[1]
-                        nextTilepos[1] += direction[1] / (int)Mathf.Abs(direction[1]);
+                        nextTilepos.y += direction[1] / (int)Mathf.Abs(direction[1]);
                     }
                     bestPath.Add(GetTile(nextTilepos));
 
@@ -229,7 +241,7 @@ public class Map
         Tile[] bestPath = new Tile[0];
         float distance = -1;
         float[][] distanceMap = new float[MAPWIDTH][];
-        Vector2?[][] previousTilePos = new Vector2?[MAPWIDTH][];
+        Position?[][] previousTilePos = new Position?[MAPWIDTH][];
         SearchAbleArray<Tile> queue = new SearchAbleArray<Tile>();
         SearchAbleArray<Tile> diagonalQueue = new SearchAbleArray<Tile>();
         SearchAbleArray<Tile> sidewaysQueue = new SearchAbleArray<Tile>();
@@ -239,14 +251,14 @@ public class Map
         for (int i = 0; i < MAPWIDTH; i++)
         {
             distanceMap[i] = new float[MAPHEIGHT];
-            previousTilePos[i] = new Vector2?[MAPHEIGHT];
+            previousTilePos[i] = new Position?[MAPHEIGHT];
             for(int j =0; j < MAPHEIGHT; j++)
             {
                 distanceMap[i][j] = -1;
                 previousTilePos[i][j] = null;
             }
         }
-        previousTilePos[source.GetX()][source.GetY()] = new Vector2(source.GetX(), source.GetY());
+        previousTilePos[source.GetX()][source.GetY()] = new Position(source.GetX(), source.GetY());
         distanceMap[source.GetX()][source.GetY()] = 0;
         while ((queue.GetSize() > 0 || sidewaysQueue.GetSize() > 0 || backwardsQueue.GetSize() > 0) && !pathFound)
         {
@@ -314,7 +326,7 @@ public class Map
                             if (distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] < 0 || alteredDistance < distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()])
                             {
                                distanceMap[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = alteredDistance;
-                               previousTilePos[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = new Vector2(currentElement.GetX(), currentElement.GetY());
+                               previousTilePos[queueAdjacent[i].GetX()][queueAdjacent[i].GetY()] = new Position(currentElement.GetX(), currentElement.GetY());
                             }
                         }
                     }
@@ -322,7 +334,6 @@ public class Map
             }
             currentQueue.Remove(currentElement);
         }
-       // distance = distanceMap[destination.GetX()][destination.GetY()];
         Tile[] tempBestPath = new Tile[0];
         Tile previousTile = destination;
         do
@@ -330,7 +341,7 @@ public class Map
             if (previousTilePos[previousTile.GetX()][previousTile.GetY()] != null)
             {
                 TestMain.AddElement<Tile>(ref tempBestPath, previousTile);
-                previousTile = GetTile((Vector2)previousTilePos[previousTile.GetX()][previousTile.GetY()]);
+                previousTile = GetTile((Position)previousTilePos[previousTile.GetX()][previousTile.GetY()]);
             }
             else
             {
@@ -396,7 +407,7 @@ public class Map
         {
             for(int j = -1; j< 2; j++)
             {
-                int[] currPos = { i + givenTile.GetX(), j + givenTile.GetY() };
+                Position currPos = new Position( i + givenTile.GetX(), j + givenTile.GetY());
                 if (GetTile(currPos) != null && !(i == 0 && j == 0))
                 {
                     TestMain.AddElement<Tile>(ref adjacentTile, GetTile(currPos));
@@ -493,7 +504,6 @@ public class Map
     {
         if (givenTile == null || adjacentTile == null)
         {
-            GetAdjacent(GetTile(new int[] { 0, 0 }), GetTile(new int[] { 2, 2 }));
             return false;
         }
         else
@@ -587,7 +597,7 @@ public class Map
                         }
                         for (int k = currTile.GetY(); k <= endTile.GetY(); k++)
                         {
-                            int[] currPos = new int[] { currTile.GetX(), k };
+                            Position currPos = new Position(currTile.GetX(), k);
                             TestMain.AddElement<Tile>(ref area, GetTile(currPos));
                         }
                         
@@ -631,7 +641,8 @@ public class Map
         if (newBuilding != null && givenCharacter.RulesDomain(givenTile.GetDomain()))
         {
             givenTile.AddBuilding(newBuilding);
-            DomainDictionary.GetDomain(givenTile.GetDomain()).AddBuilding(givenTile.GetPosition());
+            throw new System.NotImplementedException();
+            //DomainDictionary.GetDomain(givenTile.GetDomain()).AddBuilding(givenTile.GetPosition());
         }
         else
         {

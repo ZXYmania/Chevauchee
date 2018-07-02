@@ -1,36 +1,60 @@
-﻿using System.Collections;
+﻿using Microsoft.EntityFrameworkCore.Internal;
+using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class Kingdom
 {
-    public string GetName() { return m_name; }
-    private string m_name;
-    Character emperor;
-    Character[] king;
-    Character[] duke;
+    public enum Title
+    {
+        Emperor,
+        King,
+        Duke
+    }
+    public class Nobility
+    {
+        public Guid kingdom { get; protected set; }
+        public Guid character { get; protected set; }
+        public Title title { get; protected set; }
+        Nobility() { }
+        public Nobility(Kingdom givenKingdom, Character givenCharacter, Title givenTitle)
+        {
+            kingdom = givenKingdom.id;
+            character = givenCharacter.id;
+            title = givenTitle;
+        }
+    }
+    public string GetName() { return name; }
+    public Guid id;
+    public string name { get; protected set; }
     ResourceList[] ImportsExports;
     // Use this for initialization
     public Kingdom(Character givenKing, string givenName)
     {
-        m_name = givenName;
-        king = new Character[0];
+        id = Guid.NewGuid();
+        name = givenName;
         Coronate(givenKing);
-        duke = new Character[0];
         //[0] = imports  [1] = exports
         ImportsExports = new ResourceList[2];
     }
-    public Character[] GetAllCharacters()
+    public List<Character> GetAllCharacters()
     {
-        Character[] allCharacter = new Character[0];
+        throw new NotImplementedException();
+        /*Character[] allCharacter = new Character[0];
         TestMain.AddElement<Character>(ref allCharacter, emperor);
         TestMain.AddElement<Character>(ref allCharacter, king);
         TestMain.AddElement<Character>(ref allCharacter, duke);
-        return allCharacter;
+        return allCharacter;*/
     }
-    private void SetEmperor(Character givenemp)
+    private void SetEmperor(Character givenEmperor)
     {
-        emperor = givenemp;
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            Nobility currentTitle = new Nobility(this, givenEmperor, Title.Emperor);
+            db.SaveChanges();
+        }
     }
     // Update is called once per frame
     void Update()
@@ -39,57 +63,57 @@ public class Kingdom
     }
     public void Coronate(Character givenKing)
     {
-        TestMain.AddElement<Character>(ref king, givenKing);
-        givenKing.Crown(m_name);
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            Nobility currentTitle = new Nobility(this,givenKing, Title.King);
+            db.SaveChanges();
+        }
+    }
+
+    protected void AddDuke(Character givenDuke)
+    {
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            Nobility currentTitle = new Nobility(this, givenDuke, Title.Duke);
+            db.SaveChanges();
+        }
     }
 
     public void AcceptFealty(Character givenCharacter)
     {
         givenCharacter.SwearFealty();
-        Character[] allCharacter = GetAllCharacters();
-        for(int i = 0; i < allCharacter.Length; i++)
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
         {
-            if(givenCharacter.GetName() == allCharacter[i].GetName())
-            {
-                return;
-            }
+            db.Nobility.Where(n => n.kingdom == id && n.character == givenCharacter.id);
+            AddDuke(givenCharacter);
         }
-        AddDuke(givenCharacter);
     }
-    protected void AddDuke(Character givenCharacter)
+
+    public List<Domain> GetDomain()
     {
-        TestMain.AddElement<Character>(ref duke, givenCharacter);
+        using (Database.DatabaseManager db = new Database.DatabaseManager())
+        {
+            List<Domain> allDomain = (from d in db.Domain
+                                      join c in db.Character
+                                      on d.character equals c.id
+                                      join n in db.Nobility
+                                      on c.id equals n.character
+                                      where n.kingdom == id
+                                      select d).ToList();
+            return allDomain;
+        }
     }
-    public string[] GetDomain()
+    public bool ContainsDomain(Guid givenDomain)
     {
-        string[] realmDomain = new string[0];
-        if (emperor != null)
+        List<Character> allCharacter = GetAllCharacters();
+        foreach(Character currCharacter in allCharacter)
         {
-            TestMain.AddElement<string>(ref realmDomain, emperor.GetDomain());
-        }
-        string[] kingTally = new string[0];
-        for (int i = 0; i < king.Length; i++)
-        {
-            TestMain.AddElement<string>(ref kingTally, king[i].GetDomain());
-        }
-        TestMain.AddElement<string>(ref realmDomain, kingTally);
-        string[] dukeTally = new string[0];
-        for (int i = 0; i < duke.Length; i++)
-        {
-            TestMain.AddElement<string>(ref dukeTally, duke[i].GetDomain());
-        }
-        TestMain.AddElement<string>(ref realmDomain, dukeTally);
-        return realmDomain;
-    }
-    public bool ContainsDomain(string givenDomain)
-    {
-        Character[] allCharacter = GetAllCharacters();
-        for(int i = 0; i < allCharacter.Length; i++)
-        {
-            if(allCharacter[i].ControlsDomain(givenDomain))
+            throw new NotImplementedException();
+
+            /*if (allCharacter[i].ControlsDomain(givenDomain))
             {
                 return true;
-            }
+            }*/
         }
         return false;
     }

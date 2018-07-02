@@ -11,7 +11,9 @@ public class Player : MonoBehaviour
 
     GameMode[] m_mode;
     public GameMode GetMode(ModeType givenModeType) { return m_mode[(int)givenModeType]; }
-
+    public Position bottomLeft;
+    public Position topRight;
+    bool mapLoaded;
     ModeType currMode;
     public ModeType GetCurrentModeType() { return currMode; }
     public GameMode GetCurrentMode(){return m_mode[(int)currMode];}
@@ -21,13 +23,18 @@ public class Player : MonoBehaviour
 	// Use this for initialization
 	void Start ()
     {
-       m_mode = GameMode.CreateModes(this);
-       m_menu = new MenuController();
-       currMode = 0;
+
     }
     public void Initialise(Character givenCharacter)
     {
         m_character = givenCharacter;
+        m_mode = GameMode.CreateModes(this);
+        m_menu = new MenuController();
+        currMode = 0;
+        bottomLeft = new Position((int)transform.position.x-1, (int)transform.position.y-1);
+        topRight = new Position((int)transform.position.x, (int)transform.position.y);
+        TestMain.GetMap().CreateMapView(ref bottomLeft, ref topRight);
+        mapLoaded = false;
     }
     public bool ChangeStates( ModeType newMode, ClickAble clickItem = null)
     {
@@ -57,20 +64,20 @@ public class Player : MonoBehaviour
     void Update()
     {
         float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll!=0)
+        if (scroll != 0)
         {
             if (scroll > 0)
             {
                 if (TestMain.GetCamera().orthographicSize > 25)
                 {
-                    TestMain.GetCamera().orthographicSize-=5;
+                    TestMain.GetCamera().orthographicSize -= 5;
                 }
             }
             else
             {
                 if (TestMain.GetCamera().orthographicSize < 200)
                 {
-                    TestMain.GetCamera().orthographicSize+=5;
+                    TestMain.GetCamera().orthographicSize += 5;
                 }
             }
         }
@@ -82,6 +89,10 @@ public class Player : MonoBehaviour
         else
         {
             m_mode[(int)currMode].OnHover();
+        }
+        if (!mapLoaded)
+        {
+            mapLoaded = TestMain.GetMap().ExtendBound(ref bottomLeft, ref topRight);
         }
     }
 

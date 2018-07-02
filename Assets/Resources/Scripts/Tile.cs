@@ -1,10 +1,26 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
+using System.Reflection;
+using UnityEditor;
 using UnityEngine;
 
-public class Tile : Animated , ClickAble
+
+public struct Position
 {
+    public int x;
+    public int y;
+    public Position(int givenX, int givenY)
+    {
+        x = givenX;
+        y = givenY;
+    }
+}
+
+public class Tile : ClickAble
+{
+
     public enum Terrain
     {
         blank = 0,
@@ -14,27 +30,12 @@ public class Tile : Animated , ClickAble
         rough = 4,
         mountain = 5,
     }
-
-    public static Tile CreateTile(int xPos, int yPos)
-    {
-        GameObject m_gameObject = new GameObject();
-        m_gameObject.transform.localScale = new Vector3 (2, 2, 1);
-        m_gameObject.layer = LayerMask.NameToLayer("Tile");
-        Tile outPutTile = m_gameObject.AddComponent<Tile>();
-        outPutTile.Initialise(xPos, yPos);
-        BoxCollider2D m_collider = m_gameObject.AddComponent<BoxCollider2D>();
-        m_collider.size = new Vector2(1 / m_gameObject.transform.localScale.x,
-                                                        1 / m_gameObject.transform.localScale.y);
-        m_collider.offset = new Vector2(0.5f / m_collider.transform.localScale.x, 0.5f / m_collider.transform.localScale.y);
-        return outPutTile;
-    }
-
     public static bool IsImpassible(Tile givenTile, PathType givenPathType)
     {
-        switch (givenPathType ) 
+        switch (givenPathType)
         {
             case PathType.ImpassableTerrain:
-             switch (givenTile.GetTerrain())
+                switch (givenTile.GetTerrain())
                 {
                     case Terrain.ocean:
                     case Terrain.mountain:
@@ -49,51 +50,49 @@ public class Tile : Animated , ClickAble
                 }
             default: return false;
         }
-
     }
-    public int[] GetPosition() { return new int[] { GetX(), (int) GetY() };}
-    public int GetX() { return (int)GetTransformX();}
-    public int GetY() { return (int)GetTransformY();}
-
+    public int x { get; protected set; }
+    public int y { get; protected set; }
+    public Guid domain { get; protected set; }
+    public Tile.Terrain terrain { get; protected set; }
+    public Position GetPosition() { return new Position(x, y);}
+    public int GetX() { return x;}
+    public int GetY() { return y;}
     Building[] m_building;
     public Building[] GetBuildings() { return m_building; }
-    string m_domain;
-    public Terrain m_terrain;
     ModeType currentMode;
-    public void Selected(bool givenSelected, Player givenPlayer) { m_animationLayer["Selected"].SetVisible(givenSelected); }
-    public bool IsSelected() { return m_animationLayer["Selected"].GetVisible(); }
-    public void Hover(bool givenHover, Player givenPlayer) { }
+    TileAnimation m_animation;
+    public void Selected(bool givenSelected, Player givenPlayer) { m_animation.Select(givenSelected);}
+    public bool IsSelected() { return m_animation.IsSelected(); }
+    public void Hover(bool givenHover, Player givenPlayer) { m_animation.Select(givenHover);}
 
-    protected void Initialise(int xPos, int yPos)
-    {        
-        m_building = new Building[0];
-        m_terrain = Terrain.blank;
-        SetTransform(xPos, yPos);
-        base.Initialise();
-        gameObject.layer = LayerMask.NameToLayer("Tile");
-        gameObject.name = ToString();
-        AddAnimationLayer("Terrain", "Terrain", new Color(0, 0, 0, 1), true);
-        AddAnimationLayer("Selected", "Selected", new Color(0, 0, 0, 1), true);
-        m_animationLayer["Selected"].SetAnimationPosition(0, 0, -2);
-        int probability = UnityEngine.Random.Range(0, 10);
-        if(probability < 4)
-        {
-            m_terrain = Terrain.smooth;
-        }
-        else if(probability < 7)
-        {
-            m_terrain = Terrain.forest;
-        }
-        else if(probability < 9)
-        {
-            m_terrain = Terrain.rough;
-        }
-        else
-        {
-            m_terrain = Terrain.mountain;
-        }
-        ChangeAnimation("Terrain", (int)m_terrain);
-        m_animationLayer["Selected"].SetVisible(false);
+    public Tile()
+    {
+
+    }
+
+    public Tile(int givenX, int givenY, Terrain givenTerrain, Domain givenDomain)
+    {
+        Initialise(givenX, givenY, givenTerrain, givenDomain);
+    }
+    public Tile(Position givenPos, Terrain givenTerrain, Domain givenDomain)
+    {
+        Initialise(givenPos.x, givenPos.y, givenTerrain, givenDomain);
+    }
+
+    protected void Initialise(int givenX, int givenY, Terrain givenTerrain, Domain givenDomain)
+    {
+        x = givenX;
+        y = givenY;
+        terrain = givenTerrain;
+        domain = givenDomain.id;
+
+    }
+    public void LoadTile()
+    {
+        m_animation = TileAnimation.CreateAnimation(x,y,terrain,domain);
+        m_animation.gameObject.layer = LayerMask.NameToLayer("Tile");
+        m_animation.gameObject.name = ToString();
     }
 
     public void Update()
@@ -109,38 +108,38 @@ public class Tile : Animated , ClickAble
                 case ModeType.build:
                     if (m_building.Length > 0)
                     {
-                        m_animationLayer["Overlay"].SetVisible(true);
-                        ChangeSpriteMap("Overlay", m_building[0].ToString());
-
+                        m_animation.SetBuilding(m_building[0]);
+                        m_animation.ShowBuilding(true);
                     }
-                    else if (m_domain != null)
+                    else if (domain != null)
                     {
-                        if (currentPlayer.GetCharacter().RulesDomain(m_domain))
+                        if (currentPlayer.GetCharacter().RulesDomain(GetDomain()))
                         {
-                            m_animationLayer["Overlay"].SetVisible(false);
+                            m_animation.ShowBuilding(false);
                         }
                         else
                         {
-                            m_animationLayer["Overlay"].SetVisible(true);
-                            ChangeSpriteMap("Overlay", m_domain);
+                            m_animation.ShowBuilding(true);
+                            throw new NotImplementedException();
+                            //ChangeSpriteMap("Overlay", m_domain);
                         }
                         break;
                     }
                     break;
                 case ModeType.observe:
-                    if (m_building.Length > 0){ m_animationLayer["Overlay"].SetVisible(true); ChangeSpriteMap("Overlay", m_building[0].ToString());
-                    }
-                    else if (m_domain != null){
-                        m_animationLayer["Overlay"].SetVisible(true);ChangeSpriteMap("Overlay", m_domain);
+                    if (m_building.Length > 0){ m_animation.ShowBuilding(true);}
+                    else if (domain != null)
+                    {
+                        throw new NotImplementedException();
+                        //m_animationLayer["Overlay"].SetVisible(true);ChangeSpriteMap("Overlay", m_domain);
                     }
                     break;
             }
             currentMode = newMode;
         }
-        Animate();
     }
 
-    public Terrain GetTerrain() { return m_terrain; }
+    public Terrain GetTerrain() { return terrain; }
     public float GetObstacle(PathType givenPathtype)
     {
         switch (givenPathtype)
@@ -150,7 +149,7 @@ public class Tile : Animated , ClickAble
             {
                 return 0.8f;
             }
-            switch (m_terrain)
+            switch (terrain)
             {
                 case Terrain.ocean: return -1;
                 case Terrain.mountain: return -1;
@@ -160,7 +159,7 @@ public class Tile : Animated , ClickAble
                 default: return 1;
             }
             case PathType.NavalRoute:
-                switch (m_terrain)
+                switch (terrain)
                 {
                     case Terrain.ocean: return 1;
                     default: return -1;
@@ -175,7 +174,7 @@ public class Tile : Animated , ClickAble
                 }
                 return -1;
             case PathType.ImpassableTerrain:
-                switch(m_terrain)
+                switch(terrain)
                 {
                     case Terrain.mountain: return -1;
                     case Terrain.ocean: return -1;
@@ -186,7 +185,8 @@ public class Tile : Animated , ClickAble
     }
     public void SetDomain(string givenDomain)
     {
-        if(DomainDictionary.Contains(givenDomain) && m_terrain != Terrain.ocean)
+        throw new NotImplementedException();
+        /*if (DomainDictionary.Contains(givenDomain) && m_terrain != Terrain.ocean)
         {
             m_domain = givenDomain;
             AddAnimationLayer("Overlay", givenDomain, new Color(0, 0, 0, 1), true);
@@ -197,15 +197,15 @@ public class Tile : Animated , ClickAble
         else
         {
             Debug.Log("Domain "+ givenDomain +" not set ");
-        }
+        }*/
     }
-    public string GetDomain() { return m_domain; }
+    public Guid GetDomain() { return domain; }
     public void SetTerrain(Terrain givenTerrain)
     {
-        if(m_terrain == Terrain.blank || givenTerrain == Terrain.ocean)
+        if(terrain == Terrain.blank)
         {
-            m_terrain = givenTerrain;
-            ChangeSpriteMap("Terrain","Terrain",(int)m_terrain);
+            terrain = givenTerrain;
+            m_animation.SetTerrain(terrain);
         }
     }
 
@@ -228,15 +228,12 @@ public class Tile : Animated , ClickAble
             if (!haveBuilding)
             {
                 TestMain.AddElement<Building>(ref m_building, givenBuilding);
-                AddAnimationLayer("Overlay", givenBuilding.ToString(), new Color(0, 0, 0, 1), true);
-                m_animationLayer["Overlay"].SetAnimationPosition(0, 0, -1);
-                ChangeSpriteMap("Overlay", m_building[0].ToString());
-                m_animationLayer["Overlay"].SetVisible(true);
+                m_animation.SetBuilding(givenBuilding);
                 return true;
             }
         return false;
     }
-    public override string ToString()
+    public string ToStringT()
     {
         return "{X : "+GetX()+", Y: "+GetY()+"}" ;
     }
@@ -248,5 +245,72 @@ public class Tile : Animated , ClickAble
             return firstGiven.ToString() == secondGiven.ToString();
         }
         return false;
+    }
+
+
+    private class TileAnimation : Animated
+    {
+        public static TileAnimation CreateAnimation(int givenX, int givenY, Terrain givenTerrain, Guid givenDomain)
+        {
+            TileAnimation outPut = CreateAnimation();
+            outPut.SetTransform(new Vector2(givenX, givenY));
+            outPut.SetTerrain(givenTerrain);
+            return outPut;
+        }
+        public static TileAnimation CreateAnimation()
+        {
+            GameObject m_gameObject = new GameObject();
+            m_gameObject.transform.localScale = new Vector3(2, 2, 1);
+            m_gameObject.layer = LayerMask.NameToLayer("Tile");
+            TileAnimation outPutTile = m_gameObject.AddComponent<TileAnimation>();
+            BoxCollider2D m_collider = m_gameObject.AddComponent<BoxCollider2D>();
+            m_collider.size = new Vector2(1 / m_gameObject.transform.localScale.x, 1 / m_gameObject.transform.localScale.y);
+            m_collider.offset = new Vector2(0.5f / m_collider.transform.localScale.x, 0.5f / m_collider.transform.localScale.y);
+            outPutTile.Initialise();
+            return outPutTile;
+        }
+
+        protected override void Initialise()
+        {
+            base.Initialise();
+            AddAnimationLayer("Terrain", "Terrain", new Color(0, 0, 0, 1), true);
+            AddAnimationLayer("Selected", "Selected", new Color(0, 0, 0, 1), true);
+            m_animationLayer["Selected"].SetAnimationPosition(0, 0, -2);
+            ChangeAnimation("Terrain", (int)Terrain.blank);
+            m_animationLayer["Selected"].SetVisible(false);
+        }
+        void Update()
+        {
+            Animate();
+        }
+        public void SetTerrain(Terrain givenTerrain)
+        {
+            ChangeAnimation("Terrain", (int)givenTerrain);
+        }
+        public void ShowTerrain(bool visible)
+        {
+            m_animationLayer["Terrain"].SetVisible(visible);
+        }
+        public bool IsSelected()
+        {
+            return m_animationLayer["Selected"].GetVisible();
+        }
+        public void Select(bool givenSelected)
+        {
+            m_animationLayer["Selected"].SetVisible(givenSelected);
+        }
+        public void SetBuilding(Building givenBuilding)
+        {
+            if (!m_animationLayer.ContainsKey("Building"))
+            {
+                AddAnimationLayer("Building", givenBuilding.GetName(), new Color(0, 0, 0, 1), true);
+                m_animationLayer["Building"].SetAnimationPosition(0, 0, -1);
+            }
+            ChangeSpriteMap("Building", givenBuilding.ToString());
+        }
+        public void ShowBuilding(bool visible)
+        {
+            m_animationLayer["Building"].SetVisible(visible);
+        }
     }
 }

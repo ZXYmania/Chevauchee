@@ -168,6 +168,11 @@ public class BuildMode : GameMode
 
     public override void OnClick(bool[] givenClick)
     {
+        if (hover != null)
+        {
+            hover.Selected(false, m_player);
+        }
+        hover = null;
         if (givenClick[0])
         {
             if (clickLength > 15)
@@ -248,6 +253,11 @@ public class BuildMode : GameMode
                     {
                         if (currbuilding != "Road")
                         {
+                            if(hover!=null)
+                            {
+                                hover.Hover(false, m_player);
+                            }
+                            hover = cursorItem;
                             cursorItem.Hover(true, m_player);
                         }
                         else
@@ -268,7 +278,7 @@ public class BuildMode : GameMode
                                     currPath = tempPath;
                                     for (int i = 0; i < currPath.Length; i++)
                                     {
-                                        currPath[i].Selected(true, m_player);
+                                        currPath[i].Hover(true, m_player);
                                     }
                                     for (int i = 0; i < selected.Length; i++)
                                     {
@@ -316,11 +326,6 @@ public class BuildMode : GameMode
     public override bool OnModeExit()
     {
         ClearSelection();
-        if (hover != null)
-        {
-            hover.Selected(false, m_player);
-        }
-        hover = null;
         return true;
     }
 
@@ -335,6 +340,11 @@ public class BuildMode : GameMode
         {
             currPath[i].Selected(false, m_player);
         }
+        if (hover != null)
+        {
+            hover.Selected(false, m_player);
+        }
+        hover = null;
         currPath = new Tile[0];
         return true;
     }

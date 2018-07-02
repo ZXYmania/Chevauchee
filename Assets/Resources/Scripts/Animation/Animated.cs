@@ -10,7 +10,11 @@ public abstract class Animated : SecondDimension
     protected Dictionary<string,AnimationLayer> m_animationLayer;
     protected int GetAmountofAnimationLayers() { return m_animationLayer.Count; }
     protected bool HasTicked() { float tempTimer = m_animationTimer + Time.deltaTime; return (Mathf.Floor(m_animationTimer / 0.04f) < Mathf.Floor(tempTimer / 0.04f)); }
-
+    protected virtual void Initialise(Vector2 givenPosition)
+    {
+        SetTransform(givenPosition);
+        m_animationLayer = new Dictionary<string, AnimationLayer>();
+    }
     protected virtual void Initialise()
     {
         m_animationLayer = new Dictionary<string, AnimationLayer>();
@@ -22,7 +26,6 @@ public abstract class Animated : SecondDimension
         {
             foreach (KeyValuePair<string,AnimationLayer> item in m_animationLayer)
             {
-
                     if(item.Value.GetVisible())
                     {
                         item.Value.Animate();
@@ -66,16 +69,16 @@ public abstract class Animated : SecondDimension
         }
     }
 
-    public void AddAnimation(string givenLayer, string givenAnimation)
+    protected void AddAnimation(string givenLayer, string givenAnimation)
     {
         m_animationLayer[givenLayer].AddSpriteMap(givenAnimation);
     }
     
-    public void ChangeAnimation(string givenLayer,int givenAniamtion, int givenFrame = 0)
+    protected void ChangeAnimation(string givenLayer,int givenAniamtion, int givenFrame = 0)
     {
         m_animationLayer[givenLayer].ChangeAnimation(givenAniamtion,givenFrame);
     }
-    public void ChangeSpriteMap(string givenLayer,string givenSpriteMap, int givenAnimation = 0, int givenFrame = 0)
+    protected void ChangeSpriteMap(string givenLayer,string givenSpriteMap, int givenAnimation = 0, int givenFrame = 0)
     {
         m_animationLayer[givenLayer].ChangeSpriteMap(givenSpriteMap, givenAnimation, givenFrame);
     }
